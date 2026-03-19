@@ -21,13 +21,18 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'https://picsum.photos/seed/purescan/192/192',
-              sizes: '192x192',
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
+              sizes: '1024x1024',
               type: 'image/png'
             },
             {
-              src: 'https://picsum.photos/seed/purescan/512/512',
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
               sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
+              sizes: '192x192',
               type: 'image/png'
             }
           ]

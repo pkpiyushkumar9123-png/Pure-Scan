@@ -686,8 +686,13 @@ export default function App() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-healthy-green rounded-lg flex items-center justify-center">
-            <Scan className="text-white w-5 h-5" />
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
+            <img 
+              src="https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png" 
+              alt="PureScan AI Logo" 
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
         </div>
@@ -1463,8 +1468,13 @@ export default function App() {
             className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-              <div className="w-20 h-20 bg-healthy-green rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20">
-                <Scan className="text-white w-10 h-10" />
+              <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/10 overflow-hidden">
+                <img 
+                  src="https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png" 
+                  alt="PureScan AI Logo" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div className="space-y-4">
                 <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
