@@ -160,6 +160,10 @@ export default function App() {
   const [extractedIngredients, setExtractedIngredients] = useState<string>("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<ScanResult[]>([]);
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    return localStorage.getItem('GEMINI_API_KEY') || '';
+  });
+  const [error, setError] = useState<string | null>(null);
   
   // Load history from local storage and sync with Supabase
   useEffect(() => {
@@ -251,13 +255,24 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // --- AI Logic ---
+  const getApiKey = () => {
+    if (customApiKey) return customApiKey;
+    // Check for VITE_ prefix if available, otherwise process.env
+    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (envKey) return envKey;
+    return 'AIzaSyBeB0puFvDV3qgfv0gWGEJA1gsWOKC6HYo'; // Inbuilt fallback
+  };
+
+  const handleSaveApiKey = (key: string) => {
+    setCustomApiKey(key);
+    localStorage.setItem('GEMINI_API_KEY', key);
+  };
+
   const autoDetectLabel = async (base64Data: string) => {
     try {
       setStatus('detecting');
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables in AI Studio Settings.");
-      }
+      setError(null);
+      const apiKey = getApiKey();
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -324,10 +339,8 @@ export default function App() {
   const extractIngredients = async (base64Data: string) => {
     try {
       setStatus('extracting');
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables in AI Studio Settings.");
-      }
+      setError(null);
+      const apiKey = getApiKey();
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -354,7 +367,7 @@ export default function App() {
       setStatus('editing');
     } catch (error) {
       console.error("AI Extraction failed:", error);
-      alert("Failed to extract ingredients. Please try again.");
+      setError("Failed to extract ingredients. Please check your API key or try again.");
       setStatus('idle');
     }
   };
@@ -362,10 +375,8 @@ export default function App() {
   const analyzeIngredients = async (ingredientsText: string) => {
     try {
       setStatus('analyzing');
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables in AI Studio Settings.");
-      }
+      setError(null);
+      const apiKey = getApiKey();
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -425,7 +436,7 @@ export default function App() {
       setStatus('result');
     } catch (error) {
       console.error("AI Analysis failed:", error);
-      alert("Failed to analyze ingredients. Please try again.");
+      setError("Failed to analyze ingredients. Please check your API key or try again.");
       setStatus('editing');
     }
   };
@@ -522,7 +533,7 @@ export default function App() {
     if (imageToDetect) {
       await autoDetectLabel(imageToDetect);
     } else {
-      alert("No image to scan. Please point your camera or upload a photo.");
+      setError("No image to scan. Please point your camera or upload a photo.");
     }
   };
 
@@ -912,8 +923,38 @@ export default function App() {
             {!showProfile ? (
               <>
                 <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-                <div className="space-y-2">
-                  {['Profile', 'Dietary Preferences', 'Privacy Policy'].map((item) => (
+                <div className="space-y-4">
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-healthy-green/10 rounded-xl">
+                        <Settings className="w-5 h-5 text-healthy-green" />
+                      </div>
+                      <h3 className="font-bold text-gray-900">Gemini API Key</h3>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      By default, PureScan uses an inbuilt free API key. You can provide your own key below to avoid rate limits.
+                    </p>
+                    <div className="space-y-2">
+                      <input 
+                        type="password"
+                        placeholder="Enter your Gemini API Key"
+                        value={customApiKey}
+                        onChange={(e) => handleSaveApiKey(e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                      />
+                      {customApiKey && (
+                        <button 
+                          onClick={() => handleSaveApiKey('')}
+                          className="text-xs font-bold text-critical-red uppercase tracking-widest"
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {['Profile', 'Dietary Preferences', 'Privacy Policy'].map((item) => (
                     <button 
                       key={item} 
                       onClick={() => item === 'Profile' && setShowProfile(true)}
@@ -923,6 +964,7 @@ export default function App() {
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </button>
                   ))}
+                  </div>
                 </div>
               </>
             ) : (
@@ -1167,6 +1209,31 @@ export default function App() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-6 right-6 z-50"
+          >
+            <div className="bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+              <button 
+                onClick={() => setError(null)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
