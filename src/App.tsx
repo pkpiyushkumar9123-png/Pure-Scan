@@ -17,7 +17,9 @@ import {
   Check,
   Edit3,
   Search,
-  Heart
+  Heart,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -182,10 +184,35 @@ export default function App() {
   const [showDietaryView, setShowDietaryView] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
   const [showSupportPopup, setShowSupportPopup] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
   
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPopup(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallPopup(false);
+  };
+
   // Load history from local storage and sync with Supabase
   useEffect(() => {
     const saved = localStorage.getItem('purescan_history');
@@ -662,7 +689,7 @@ export default function App() {
           <div className="w-8 h-8 bg-healthy-green rounded-lg flex items-center justify-center">
             <Scan className="text-white w-5 h-5" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan</h1>
+          <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
         </div>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <Info className="w-5 h-5 text-gray-500" />
@@ -1440,9 +1467,12 @@ export default function App() {
                 <Scan className="text-white w-10 h-10" />
               </div>
               <div className="space-y-4">
-                <h2 className="text-3xl font-black text-gray-900 tracking-tight">Welcome to PureScan</h2>
-                <p className="text-gray-500 leading-relaxed">
-                  Your AI-powered companion for smarter, healthier food choices.
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
+                <p className="text-healthy-green font-bold text-lg leading-tight px-4">
+                  Scan the Label. Know the Truth. Make your life 1 step more Improved!
+                </p>
+                <p className="text-gray-500 text-sm leading-relaxed px-2">
+                  Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
                 </p>
               </div>
 
@@ -1660,6 +1690,52 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* PWA Install Popup */}
+      <AnimatePresence>
+        {showInstallPopup && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInstallPopup(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
+                <Smartphone className="w-8 h-8 text-healthy-green" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-gray-900">Install PureScan AI</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Install PureScan AI on your home screen for faster access and a better experience.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleInstallClick}
+                  className="w-full py-4 bg-healthy-green text-white rounded-2xl font-bold shadow-lg shadow-healthy-green/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  INSTALL NOW
+                </button>
+                <button
+                  onClick={() => setShowInstallPopup(false)}
+                  className="w-full py-4 bg-gray-50 text-gray-500 rounded-2xl font-bold active:scale-[0.98] transition-all"
+                >
+                  MAYBE LATER
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Support Us Popup */}
       <AnimatePresence>
         {showSupportPopup && (
@@ -1681,7 +1757,7 @@ export default function App() {
                 <Heart className="w-8 h-8 text-healthy-green fill-healthy-green" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-900">Support PureScan</h3>
+                <h3 className="text-xl font-bold text-gray-900">Support PureScan AI</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   We’re committed to keeping your health data private and ad-free. Support for direct donations is coming soon. Thank you for being part of the journey.
                 </p>

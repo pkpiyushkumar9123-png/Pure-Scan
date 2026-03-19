@@ -1,5 +1,5 @@
 {
-  "name": "PureScan",
-  "description": "AI-powered healthy food scanner for ingredient analysis and health grading.",
+  "name": "PureScan AI",
+  "description": "Stop guessing. Start auditing. PureScan uses advanced Computer Vision and AI to cut through food marketing fluff and give you the raw truth in seconds.",
   "requestFramePermissions": ["camera"]
 }
