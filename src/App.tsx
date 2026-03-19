@@ -16,7 +16,8 @@ import {
   Crop as CropIcon,
   Check,
   Edit3,
-  Search
+  Search,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -38,6 +39,7 @@ interface ScanResult {
   productName: string;
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   score: number; // 0-100
+  confidenceScore?: number; // 0-100
   riskyIngredients: Ingredient[];
   alternative: {
     name: string;
@@ -152,6 +154,9 @@ export default function App() {
   const [status, setStatus] = useState<'idle' | 'detecting' | 'cropping' | 'extracting' | 'editing' | 'analyzing' | 'result'>('idle');
   const [activeTab, setActiveTab] = useState('scan');
   const [showProfile, setShowProfile] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -163,7 +168,23 @@ export default function App() {
   const [customApiKey, setCustomApiKey] = useState<string>(() => {
     return localStorage.getItem('GEMINI_API_KEY') || '';
   });
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean>(() => {
+    return localStorage.getItem('purescan_terms_accepted') === 'true';
+  });
+  const [anonymousAnalytics, setAnonymousAnalytics] = useState<boolean>(() => {
+    return localStorage.getItem('purescan_anonymous_analytics') === 'true';
+  });
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>(() => {
+    const saved = localStorage.getItem('purescan_dietary_preferences');
+    return saved ? JSON.parse(saved) : ['Wheat', 'Barley', 'Rye'];
+  });
+  const [showLegalView, setShowLegalView] = useState<'none' | 'disclaimer' | 'privacy' | 'terms'>('none');
+  const [showDietaryView, setShowDietaryView] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
+  const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const FORBIDDEN_KEYWORDS = dietaryPreferences;
   
   // Load history from local storage and sync with Supabase
   useEffect(() => {
@@ -227,6 +248,32 @@ export default function App() {
     await supabase.auth.signOut();
     setUser(null);
     setShowProfile(false);
+    setIsEditingProfile(false);
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { 
+          full_name: editName,
+          avatar_url: editAvatarUrl
+        }
+      });
+      if (error) throw error;
+      setUser(data.user);
+      setIsEditingProfile(false);
+      setError("Profile updated successfully!");
+      setTimeout(() => setError(null), 3000);
+    } catch (err) {
+      console.error('Update profile error:', err);
+      setError("Failed to update profile.");
+    }
+  };
+
+  const startEditingProfile = () => {
+    setEditName(user?.user_metadata?.full_name || "");
+    setEditAvatarUrl(user?.user_metadata?.avatar_url || "");
+    setIsEditingProfile(true);
   };
 
   const saveToHistory = async (result: ScanResult) => {
@@ -287,7 +334,7 @@ export default function App() {
                 },
               },
               {
-                text: "Find the nutrition facts label AND the ingredients list in this image. Return a single bounding box that covers BOTH areas. If they are separate, return a box that includes both. The coordinates should be normalized from 0 to 1000 (where 0,0 is top-left and 1000,1000 is bottom-right). Return as JSON: {x, y, width, height}.",
+                text: "Find the nutrition facts label AND the ingredients list in this image. ALSO, check if there are any human faces in the image. Return a single bounding box that covers BOTH areas. If they are separate, return a box that includes both. The coordinates should be normalized from 0 to 1000 (where 0,0 is top-left and 1000,1000 is bottom-right). Return as JSON: {x, y, width, height, hasFace: boolean}.",
               },
             ],
           },
@@ -301,13 +348,20 @@ export default function App() {
               y: { type: Type.NUMBER },
               width: { type: Type.NUMBER },
               height: { type: Type.NUMBER },
+              hasFace: { type: Type.BOOLEAN },
             },
-            required: ['x', 'y', 'width', 'height'],
+            required: ['x', 'y', 'width', 'height', 'hasFace'],
           }
         }
       });
 
       const box = JSON.parse(response.text);
+
+      if (box.hasFace) {
+        setError("Face detected. For privacy reasons, we do not process images containing human faces.");
+        setStatus('idle');
+        return;
+      }
       
       // Calculate initial crop and zoom for react-easy-crop
       // This is a rough estimation to center the detected box
@@ -385,7 +439,7 @@ export default function App() {
             role: "user",
             parts: [
               {
-                text: `Analyze this food data (ingredients and/or nutrition facts): "${ingredientsText}". Identify the product name (if possible from context or generic), calculate a health grade (A-F) and score (0-100), list risky ingredients or nutritional concerns with descriptions and health implications, and suggest a healthier alternative.`,
+                text: `Analyze this food data (ingredients and/or nutrition facts): "${ingredientsText}". Identify the product name (if possible from context or generic), calculate a health grade (A-F) and score (0-100), list risky ingredients or nutritional concerns with descriptions and health implications, and suggest a healthier alternative. ALSO, provide an OCR confidence score (0-100) based on how clear the input text was.`,
               },
             ],
           },
@@ -398,6 +452,7 @@ export default function App() {
               productName: { type: Type.STRING },
               grade: { type: Type.STRING, enum: ['A', 'B', 'C', 'D', 'F'] },
               score: { type: Type.NUMBER },
+              confidenceScore: { type: Type.NUMBER },
               riskyIngredients: {
                 type: Type.ARRAY,
                 items: {
@@ -426,6 +481,34 @@ export default function App() {
       });
 
       const result = JSON.parse(response.text);
+      
+      // AI Guardrail: Confidence Score Check
+      if (result.confidenceScore !== undefined && result.confidenceScore < 85) {
+        setError("Low scan confidence. Please ensure the label is well-lit and in focus for accurate analysis.");
+        setStatus('editing');
+        return;
+      }
+
+      // AI Guardrail: Allergen Hard-Coding
+      const foundForbidden = FORBIDDEN_KEYWORDS.filter(keyword => 
+        ingredientsText.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      if (foundForbidden.length > 0) {
+        result.grade = 'F';
+        result.score = 0;
+        foundForbidden.forEach(keyword => {
+          if (!result.riskyIngredients.some((ri: any) => ri.name.toLowerCase().includes(keyword.toLowerCase()))) {
+            result.riskyIngredients.unshift({
+              name: `CRITICAL ALLERGEN: ${keyword}`,
+              risk: 'high',
+              description: "Hard-coded safety override: This ingredient is strictly forbidden based on your safety settings.",
+              implications: "Consumption of this ingredient may cause severe allergic reactions or health complications for sensitive individuals."
+            });
+          }
+        });
+      }
+
       const finalResult: ScanResult = {
         ...result,
         id: crypto.randomUUID(),
@@ -824,36 +907,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Learn More Section */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Learn More</h2>
-                <button className="text-healthy-green text-sm font-semibold flex items-center">
-                  View All <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 no-scrollbar">
-                {YOUTUBE_VIDEOS.map((video) => (
-                  <motion.div 
-                    key={video.id}
-                    whileHover={{ y: -4 }}
-                    className="flex-shrink-0 w-64 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100"
-                  >
-                    <div className="relative aspect-video">
-                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                          <Play className="w-5 h-5 text-healthy-green fill-healthy-green" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2">{video.title}</h3>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
           </div>
         )}
 
@@ -924,6 +977,26 @@ export default function App() {
               <>
                 <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    {['Profile', 'Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
+                    <button 
+                      key={item} 
+                      onClick={() => {
+                        if (item === 'Profile') setShowProfile(true);
+                        if (item === 'Dietary Preferences') setShowDietaryView(true);
+                        if (item === 'Medical Disclaimer') setShowLegalView('disclaimer');
+                        if (item === 'Privacy Policy') setShowLegalView('privacy');
+                        if (item === 'Terms of Service') setShowLegalView('terms');
+                        if (item === 'Support us') setShowSupportPopup(true);
+                      }}
+                      className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="font-medium text-gray-700">{item}</span>
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </button>
+                  ))}
+                  </div>
+
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-healthy-green/10 rounded-xl">
@@ -953,67 +1026,154 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    {['Profile', 'Dietary Preferences', 'Privacy Policy'].map((item) => (
-                    <button 
-                      key={item} 
-                      onClick={() => item === 'Profile' && setShowProfile(true)}
-                      className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="font-medium text-gray-700">{item}</span>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </button>
-                  ))}
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-healthy-green/10 rounded-xl">
+                          <CheckCircle2 className="w-5 h-5 text-healthy-green" />
+                        </div>
+                        <h3 className="font-bold text-gray-900">Anonymous Analytics</h3>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const newValue = !anonymousAnalytics;
+                          setAnonymousAnalytics(newValue);
+                          localStorage.setItem('purescan_anonymous_analytics', String(newValue));
+                        }}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${anonymousAnalytics ? 'bg-healthy-green' : 'bg-gray-200'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${anonymousAnalytics ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      Help us improve the AI by sharing anonymized ingredient data (No photos are ever shared).
+                    </p>
+                    <div className="pt-4 border-t border-gray-100">
+                      <button 
+                        onClick={async () => {
+                          if (confirm("Are you sure you want to wipe your entire scan history? This action cannot be undone.")) {
+                            setHistory([]);
+                            localStorage.removeItem('purescan_history');
+                            if (user) {
+                              const { error } = await supabase.from('scans').delete().eq('user_id', user.id);
+                              if (error) console.error("Failed to wipe history from Supabase:", error);
+                            }
+                            setError("History wiped successfully.");
+                            setTimeout(() => setError(null), 3000);
+                          }
+                        }}
+                        className="w-full py-3 bg-red-50 text-critical-red rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors text-xs"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        WIPE ALL DATA
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>
             ) : (
               <div className="space-y-8">
                 {/* Profile Header */}
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => setShowProfile(false)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <ChevronDown className="w-6 h-6 rotate-90" />
-                  </button>
-                  <h2 className="text-2xl font-bold text-gray-900">Identity Hub</h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => {
+                        setShowProfile(false);
+                        setIsEditingProfile(false);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <ChevronDown className="w-6 h-6 rotate-90" />
+                    </button>
+                    <h2 className="text-2xl font-bold text-gray-900">Identity Hub</h2>
+                  </div>
+                  {!isEditingProfile && (
+                    <button 
+                      onClick={startEditingProfile}
+                      className="text-healthy-green text-sm font-bold uppercase tracking-widest"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
 
-                {/* Avatar Section */}
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full bg-healthy-green/10 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={user?.user_metadata?.avatar_url || "https://picsum.photos/seed/user/200/200"} 
-                        alt="User Avatar" 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
+                {isEditingProfile ? (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Full Name</label>
+                        <input 
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Your full name"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Avatar URL</label>
+                        <input 
+                          type="text"
+                          value={editAvatarUrl}
+                          onChange={(e) => setEditAvatarUrl(e.target.value)}
+                          placeholder="https://example.com/avatar.jpg"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                        />
+                      </div>
                     </div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 bg-healthy-green rounded-full border-4 border-white flex items-center justify-center shadow-lg">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => setIsEditingProfile(false)}
+                        className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold transition-colors"
+                      >
+                        CANCEL
+                      </button>
+                      <button 
+                        onClick={handleUpdateProfile}
+                        className="flex-1 py-4 bg-healthy-green text-white rounded-2xl font-bold shadow-lg shadow-healthy-green/20 transition-colors"
+                      >
+                        SAVE CHANGES
+                      </button>
                     </div>
                   </div>
-                  <div className="text-center">
-                    <h3 className="text-xl font-bold text-gray-900">{user?.user_metadata?.full_name || user?.email || "[User Name]"}</h3>
-                    <p className="text-sm text-gray-500 font-medium">{user?.email || "pk.piyushkumar.9123@gmail.com"}</p>
-                  </div>
-                </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Avatar Section */}
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative">
+                        <div className="w-32 h-32 rounded-full bg-healthy-green/10 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={user?.user_metadata?.avatar_url || "https://picsum.photos/seed/user/200/200"} 
+                            alt="User Avatar" 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-8 h-8 bg-healthy-green rounded-full border-4 border-white flex items-center justify-center shadow-lg">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-900">{user?.user_metadata?.full_name || user?.email || "[User Name]"}</h3>
+                        <p className="text-sm text-gray-500 font-medium">{user?.email || "pk.piyushkumar.9123@gmail.com"}</p>
+                      </div>
+                    </div>
 
-                {/* Data Points */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
-                    <p className="font-bold text-gray-900">
-                      {user ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "March 2026"}
-                    </p>
+                    {/* Data Points */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
+                        <p className="font-bold text-gray-900">
+                          {user ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "March 2026"}
+                        </p>
+                      </div>
+                      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Scans</p>
+                        <p className="font-bold text-gray-900">{history.length}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Scans</p>
-                    <p className="font-bold text-gray-900">{history.length}</p>
-                  </div>
-                </div>
+                )}
 
                 {/* Social Login Section */}
                 <div className="space-y-4">
@@ -1117,6 +1277,13 @@ export default function App() {
                         ? "This product is generally healthy and safe for consumption."
                         : "This product contains several ingredients linked to health risks."}
                     </p>
+                    <button 
+                      onClick={() => setShowLegalView('disclaimer')}
+                      className="text-[10px] font-bold text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1"
+                    >
+                      <Info className="w-3 h-3" />
+                      Verify with physical label
+                    </button>
                   </div>
                 </div>
 
@@ -1258,6 +1425,277 @@ export default function App() {
           label="Settings" 
         />
       </nav>
+
+      {/* Onboarding Gate */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
+          >
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
+              <div className="w-20 h-20 bg-healthy-green rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20">
+                <Scan className="text-white w-10 h-10" />
+              </div>
+              <div className="space-y-4">
+                <h2 className="text-3xl font-black text-gray-900 tracking-tight">Welcome to PureScan</h2>
+                <p className="text-gray-500 leading-relaxed">
+                  Your AI-powered companion for smarter, healthier food choices.
+                </p>
+              </div>
+
+              <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-warning-amber" />
+                  Medical Disclaimer
+                </h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  setHasAcceptedTerms(true);
+                  localStorage.setItem('purescan_terms_accepted', 'true');
+                  setShowOnboarding(false);
+                }}
+                className="w-full py-5 bg-healthy-green text-white rounded-2xl font-bold shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
+              >
+                ACCEPT & CONTINUE
+              </button>
+              <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold">
+                By continuing, you agree to our Terms & Privacy Policy
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dietary Preferences Overlay */}
+      <AnimatePresence>
+        {showDietaryView && (
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[110] bg-white flex flex-col"
+          >
+            <header className="px-6 py-4 flex items-center gap-4 bg-white border-b border-gray-100">
+              <button 
+                onClick={() => setShowDietaryView(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ChevronDown className="w-6 h-6 rotate-90" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">Dietary Preferences</h2>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Safety Guardrails</h3>
+                <p className="text-sm text-gray-500">
+                  Select ingredients you want to strictly avoid. PureScan will flag these with a critical warning and override AI grades.
+                </p>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {['Wheat', 'Barley', 'Rye', 'Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Soy', 'Fish', 'Shellfish'].map((pref) => {
+                    const isActive = dietaryPreferences.includes(pref);
+                    return (
+                      <button
+                        key={pref}
+                        onClick={() => {
+                          const newPrefs = isActive 
+                            ? dietaryPreferences.filter(p => p !== pref)
+                            : [...dietaryPreferences, pref];
+                          setDietaryPreferences(newPrefs);
+                          localStorage.setItem('purescan_dietary_preferences', JSON.stringify(newPrefs));
+                        }}
+                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                          isActive 
+                            ? 'bg-healthy-green/10 border-healthy-green text-healthy-green' 
+                            : 'bg-gray-50 border-gray-100 text-gray-600'
+                        }`}
+                      >
+                        <span className="font-bold">{pref}</span>
+                        {isActive ? <CheckCircle2 className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-200" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-2">
+                <div className="flex items-center gap-2 text-amber-800">
+                  <AlertCircle className="w-5 h-5" />
+                  <h4 className="font-bold">Important Note</h4>
+                </div>
+                <p className="text-xs text-amber-900/70 leading-relaxed">
+                  These guardrails act as a hard-coded safety layer. However, always verify with the physical label as AI extraction may occasionally miss text.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Legal Views Overlay */}
+      <AnimatePresence>
+        {showLegalView !== 'none' && (
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[110] bg-white flex flex-col"
+          >
+            <header className="px-6 py-4 flex items-center gap-4 bg-white border-b border-gray-100">
+              <button 
+                onClick={() => setShowLegalView('none')}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ChevronDown className="w-6 h-6 rotate-90" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">
+                {showLegalView === 'disclaimer' ? 'Medical Disclaimer' : 
+                 showLegalView === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
+              </h2>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              {showLegalView === 'disclaimer' && (
+                <div className="prose prose-sm max-w-none space-y-6">
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">Non-Medical Advice</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan.
+                    </p>
+                  </section>
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">Professional Consultation</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions. Do not disregard professional medical advice or delay seeking it because of something you have read on this application.
+                    </p>
+                  </section>
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">Accuracy of Information</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      While we strive for accuracy, AI models can occasionally misinterpret labels or provide incorrect information. Always verify the information provided by PureScan with the physical product label.
+                    </p>
+                  </section>
+                </div>
+              )}
+
+              {showLegalView === 'privacy' && (
+                <div className="space-y-8">
+                  <div className="bg-healthy-green/5 p-6 rounded-3xl border border-healthy-green/10">
+                    <h3 className="text-sm font-bold text-healthy-green uppercase tracking-widest mb-4">30-Second Summary</h3>
+                    <ul className="space-y-3">
+                      {[
+                        "Data Minimization: We don't store your original photos.",
+                        "No Biometrics: We don't track faces or identities.",
+                        "No PII Sharing: Your personal info stays private.",
+                        "Right to be Forgotten: Wipe your data anytime."
+                      ].map((text, i) => (
+                        <li key={i} className="flex gap-3 text-sm text-gray-700">
+                          <CheckCircle2 className="w-4 h-4 text-healthy-green shrink-0 mt-0.5" />
+                          {text}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="prose prose-sm max-w-none space-y-6">
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-bold text-gray-900">Data Minimization</h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        We do not store the original photos you take. Images are processed in RAM and deleted immediately after text extraction. Only the extracted text and analysis results are saved to your history.
+                      </p>
+                    </section>
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-bold text-gray-900">No Biometric Tracking</h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        We do not use the camera to identify faces. If a face is detected in a scan, the image is automatically rejected and no data is processed.
+                      </p>
+                    </section>
+                    <section className="space-y-3">
+                      <h3 className="text-lg font-bold text-gray-900">Third-Party Disclosures</h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        We use Google Gemini AI for processing. No personally identifiable information (PII) is shared with these services. Data shared is limited to the text extracted from food labels.
+                      </p>
+                    </section>
+                  </div>
+                </div>
+              )}
+
+              {showLegalView === 'terms' && (
+                <div className="prose prose-sm max-w-none space-y-6">
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">"As-Is" Clause</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      PureScan is provided "as-is" without any warranties of any kind, either express or implied, including but not limited to the implied warranties of merchantability or fitness for a particular purpose.
+                    </p>
+                  </section>
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">User Responsibility</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      You are solely responsible for verifying the accuracy of any information provided by the app. Always cross-reference AI results with the physical product packaging.
+                    </p>
+                  </section>
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-bold text-gray-900">Automated Updates</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      We reserve the right to update these terms automatically as we add new features or improve our AI models. Continued use of the app constitutes acceptance of the updated terms.
+                    </p>
+                  </section>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Support Us Popup */}
+      <AnimatePresence>
+        {showSupportPopup && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSupportPopup(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
+                <Heart className="w-8 h-8 text-healthy-green fill-healthy-green" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-gray-900">Support PureScan</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  We’re committed to keeping your health data private and ad-free. Support for direct donations is coming soon. Thank you for being part of the journey.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSupportPopup(false)}
+                className="w-full py-4 bg-healthy-green text-white rounded-2xl font-bold shadow-lg shadow-healthy-green/20 active:scale-[0.98] transition-all"
+              >
+                GOT IT
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Custom Scrollbar Styles */}
       <style>{`
