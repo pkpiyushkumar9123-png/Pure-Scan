@@ -1,0 +1,5 @@
+{
+  "name": "PureScan",
+  "description": "AI-powered healthy food scanner for ingredient analysis and health grading.",
+  "requestFramePermissions": ["camera"]
+}
