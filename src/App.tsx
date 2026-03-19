@@ -96,6 +96,31 @@ const YOUTUBE_VIDEOS = [
 
 // --- Components ---
 
+const Logo = ({ className = "w-8 h-8", iconSize = "w-5 h-5" }: { className?: string; iconSize?: string }) => {
+  const [error, setError] = useState(false);
+  const logoUrl = "https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png";
+
+  if (error) {
+    return (
+      <div className={`${className} bg-healthy-green rounded-lg flex items-center justify-center`}>
+        <Scan className={`text-white ${iconSize}`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-sm border border-gray-100`}>
+      <img 
+        src={logoUrl} 
+        alt="PureScan AI Logo" 
+        className="w-full h-full object-contain"
+        referrerPolicy="no-referrer"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+};
+
 const CircularProgress = ({ score, grade }: { score: number; grade: string }) => {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -686,14 +711,7 @@ export default function App() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
-            <img 
-              src="https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png" 
-              alt="PureScan AI Logo" 
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
+          <Logo className="w-8 h-8" iconSize="w-5 h-5" />
           <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
         </div>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1468,14 +1486,7 @@ export default function App() {
             className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-              <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/10 overflow-hidden">
-                <img 
-                  src="https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png" 
-                  alt="PureScan AI Logo" 
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
+              <Logo className="w-32 h-32 rounded-[40px]" iconSize="w-16 h-16" />
               <div className="space-y-4">
                 <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
                 <p className="text-healthy-green font-bold text-lg leading-tight px-4">

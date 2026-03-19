@@ -13,9 +13,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'PureScan - Health First',
-          short_name: 'PureScan',
-          description: 'Scan food ingredients and get instant health grades.',
+          name: 'PureScan AI - Know the Truth',
+          short_name: 'PureScan AI',
+          description: 'Stop guessing. Start auditing. PureScan uses advanced Computer Vision and AI to cut through food marketing fluff and give you the raw truth in seconds.',
           theme_color: '#065f46',
           background_color: '#ffffff',
           display: 'standalone',
