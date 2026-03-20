@@ -1607,45 +1607,47 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
+            className="fixed inset-0 z-[100] bg-white overflow-y-auto"
           >
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-              <Logo className="w-32 h-32 rounded-[40px]" iconSize="w-16 h-16" />
-              <div className="space-y-4">
-                <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
-                <p className="text-healthy-green font-bold text-lg leading-tight px-4">
-                  Scan the Label. Know the Truth. Make your life 1 step more Improved!
-                </p>
-                <p className="text-gray-500 text-sm leading-relaxed px-2">
-                  Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
-                </p>
+            <div className="min-h-full flex flex-col p-8">
+              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 py-8">
+                <Logo className="w-32 h-32 rounded-[40px]" iconSize="w-16 h-16" />
+                <div className="space-y-4">
+                  <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
+                  <p className="text-healthy-green font-bold text-lg leading-tight px-4">
+                    Scan the Label. Know the Truth. Make your life 1 step more Improved!
+                  </p>
+                  <p className="text-gray-500 text-sm leading-relaxed px-2">
+                    Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
+                  </p>
+                </div>
+
+                <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-warning-amber" />
+                    Medical Disclaimer
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
+                  </p>
+                </div>
               </div>
 
-              <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-warning-amber" />
-                  Medical Disclaimer
-                </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
+              <div className="space-y-4 pt-4">
+                <button 
+                  onClick={() => {
+                    setHasAcceptedTerms(true);
+                    localStorage.setItem('purescan_terms_accepted', 'true');
+                    setShowOnboarding(false);
+                  }}
+                  className="w-full py-5 bg-healthy-green text-white rounded-2xl font-bold shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
+                >
+                  ACCEPT & CONTINUE
+                </button>
+                <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold">
+                  By continuing, you agree to our Terms & Privacy Policy
                 </p>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <button 
-                onClick={() => {
-                  setHasAcceptedTerms(true);
-                  localStorage.setItem('purescan_terms_accepted', 'true');
-                  setShowOnboarding(false);
-                }}
-                className="w-full py-5 bg-healthy-green text-white rounded-2xl font-bold shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
-              >
-                ACCEPT & CONTINUE
-              </button>
-              <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold">
-                By continuing, you agree to our Terms & Privacy Policy
-              </p>
             </div>
           </motion.div>
         )}
