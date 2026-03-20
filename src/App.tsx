@@ -19,7 +19,8 @@ import {
   Search,
   Heart,
   Smartphone,
-  Download
+  Download,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -211,6 +212,7 @@ export default function App() {
   const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
@@ -220,6 +222,10 @@ export default function App() {
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
+      // Automatically show the popup after a short delay if not already installed
+      setTimeout(() => {
+        setShowInstallPopup(true);
+      }, 2000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -235,6 +241,7 @@ export default function App() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setIsInstallable(false);
+      setShowInstallPopup(false);
     }
     setDeferredPrompt(null);
   };
@@ -1472,6 +1479,77 @@ export default function App() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* PWA Install Popup */}
+      <AnimatePresence>
+        {showInstallPopup && isInstallable && (
+          <motion.div
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            className="fixed bottom-24 left-6 right-6 z-[150] max-w-md mx-auto"
+          >
+            <div className="bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 space-y-6 overflow-hidden relative">
+              {/* Background Accent */}
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-healthy-green/5 rounded-full blur-3xl" />
+              
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-healthy-green rounded-2xl flex items-center justify-center shadow-lg shadow-healthy-green/20">
+                    <Download className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-gray-900 leading-tight">Install PureScan AI</h3>
+                    <p className="text-sm text-gray-500 font-medium">Add to your home screen for instant access</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowInstallPopup(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                    <Zap className="w-4 h-4 text-healthy-green" />
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Faster</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                    <History className="w-4 h-4 text-healthy-green" />
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Offline</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-healthy-green" />
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Native</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowInstallPopup(false)}
+                  className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                >
+                  NOT NOW
+                </button>
+                <button 
+                  onClick={handleInstallClick}
+                  className="flex-[2] py-4 bg-healthy-green text-white rounded-2xl font-bold text-sm shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
+                >
+                  INSTALL NOW
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
