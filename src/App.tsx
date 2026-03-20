@@ -210,16 +210,16 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
   const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallPopup, setShowInstallPopup] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
-  
+
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallPopup(true);
+      setIsInstallable(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -233,9 +233,10 @@ export default function App() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
     setDeferredPrompt(null);
-    setShowInstallPopup(false);
   };
 
   // Load history from local storage and sync with Supabase
@@ -720,11 +721,11 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-24">
+      <main className={`flex-1 overflow-y-auto pb-24 ${activeTab === 'scan' ? 'flex flex-col' : ''}`}>
         {activeTab === 'scan' && (
-          <div className="p-6 space-y-8">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
             {/* Camera Viewfinder & Workflow Screens */}
-            <div className="relative aspect-[3/4] bg-black rounded-3xl overflow-hidden shadow-2xl group">
+            <div className="relative aspect-[3/4] w-full bg-black rounded-3xl overflow-hidden shadow-2xl group">
               {/* Hidden File Input */}
               <input 
                 type="file" 
@@ -796,6 +797,7 @@ export default function App() {
                             <li>Click the <b>Lock icon</b> in your address bar</li>
                             <li>Ensure <b>Camera</b> is set to "Allow"</li>
                           </ul>
+                          <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest mt-4">Point at nutrition label</p>
                         </div>
                       </div>
                     ) : (
@@ -930,7 +932,8 @@ export default function App() {
 
               {/* Scan Button Overlay (Only in idle) */}
               {status === 'idle' && (
-                <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4">
+                <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 gap-6">
+                  {!cameraError && <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest">Point at nutrition label</p>}
                   <div className="flex flex-col items-center gap-3">
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -952,7 +955,6 @@ export default function App() {
                       </button>
                     )}
                   </div>
-                  <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest">Point at nutrition label</p>
                 </div>
               )}
             </div>
@@ -1028,11 +1030,36 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    {['Profile', 'Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
+                    <button 
+                      onClick={() => setShowProfile(true)}
+                      className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="font-medium text-gray-700">Profile</span>
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </button>
+
+                    {isInstallable && (
+                      <button 
+                        onClick={handleInstallClick}
+                        className="w-full flex items-center justify-between p-4 bg-healthy-green/5 rounded-2xl border border-healthy-green/20 hover:bg-healthy-green/10 transition-colors group mb-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-healthy-green rounded-xl text-white">
+                            <Download className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <span className="block font-bold text-gray-900">Install PureScan AI</span>
+                            <span className="block text-[10px] text-healthy-green font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-healthy-green" />
+                      </button>
+                    )}
+
+                    {['Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
                     <button 
                       key={item} 
                       onClick={() => {
-                        if (item === 'Profile') setShowProfile(true);
                         if (item === 'Dietary Preferences') setShowDietaryView(true);
                         if (item === 'Medical Disclaimer') setShowLegalView('disclaimer');
                         if (item === 'Privacy Policy') setShowLegalView('privacy');
@@ -1222,6 +1249,25 @@ export default function App() {
                         <p className="font-bold text-gray-900">{history.length}</p>
                       </div>
                     </div>
+
+                    {/* PWA Install Button */}
+                    {isInstallable && (
+                      <button 
+                        onClick={handleInstallClick}
+                        className="w-full flex items-center justify-between p-4 bg-healthy-green/5 rounded-2xl border border-healthy-green/20 hover:bg-healthy-green/10 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-healthy-green rounded-xl text-white">
+                            <Download className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <span className="block font-bold text-gray-900">Install PureScan AI</span>
+                            <span className="block text-[10px] text-healthy-green font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-healthy-green" />
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1708,52 +1754,6 @@ export default function App() {
               )}
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* PWA Install Popup */}
-      <AnimatePresence>
-        {showInstallPopup && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowInstallPopup(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
-            >
-              <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
-                <Smartphone className="w-8 h-8 text-healthy-green" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-900">Install PureScan AI</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Install PureScan AI on your home screen for faster access and a better experience.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={handleInstallClick}
-                  className="w-full py-4 bg-healthy-green text-white rounded-2xl font-bold shadow-lg shadow-healthy-green/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  INSTALL NOW
-                </button>
-                <button
-                  onClick={() => setShowInstallPopup(false)}
-                  className="w-full py-4 bg-gray-50 text-gray-500 rounded-2xl font-bold active:scale-[0.98] transition-all"
-                >
-                  MAYBE LATER
-                </button>
-              </div>
-            </motion.div>
-          </div>
         )}
       </AnimatePresence>
 
