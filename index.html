@@ -7,6 +7,16 @@
     <meta name="description" content="Stop guessing. Start auditing. PureScan uses advanced Computer Vision and AI to cut through food marketing fluff and give you the raw truth in seconds." />
     <meta name="theme-color" content="#065f46" />
     <link rel="apple-touch-icon" href="https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => console.log('SW registered'))
+            .catch(error => console.log('SW registration failed:', error));
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
