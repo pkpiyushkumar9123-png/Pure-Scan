@@ -211,21 +211,29 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
   const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isIframe = window.self !== window.top;
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
 
   useEffect(() => {
+    const checkStandalone = () => {
+      setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+    };
+    checkStandalone();
+    
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setIsInstallable(true);
       // Automatically show the popup after a short delay if not already installed
-      setTimeout(() => {
-        setShowInstallPopup(true);
-      }, 2000);
+      if (!isStandalone) {
+        setTimeout(() => {
+          setShowInstallPopup(true);
+        }, 3000);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -233,17 +241,26 @@ export default function App() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isStandalone]);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-      setShowInstallPopup(false);
+    if (isIframe) {
+      setError("Please open the app in a new tab to install it.");
+      setTimeout(() => setError(null), 3000);
+      return;
     }
-    setDeferredPrompt(null);
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallPopup(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Fallback for iOS or when prompt is not available
+      setShowInstallInstructions(true);
+    }
   };
 
   // Load history from local storage and sync with Supabase
@@ -1045,24 +1062,6 @@ export default function App() {
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </button>
 
-                    {isInstallable && (
-                      <button 
-                        onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-healthy-green/5 rounded-2xl border border-healthy-green/20 hover:bg-healthy-green/10 transition-colors group mb-2"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-healthy-green rounded-xl text-white">
-                            <Download className="w-5 h-5" />
-                          </div>
-                          <div className="text-left">
-                            <span className="block font-bold text-gray-900">Install PureScan AI</span>
-                            <span className="block text-[10px] text-healthy-green font-medium uppercase tracking-wider">Add to Home Screen</span>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-healthy-green" />
-                      </button>
-                    )}
-
                     {['Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
                     <button 
                       key={item} 
@@ -1079,6 +1078,24 @@ export default function App() {
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </button>
                   ))}
+
+                    {!isStandalone && (
+                      <button 
+                        onClick={handleInstallClick}
+                        className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-xl text-white">
+                            <Download className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <span className="block font-bold">Install PureScan AI</span>
+                            <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-white" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
@@ -1258,21 +1275,21 @@ export default function App() {
                     </div>
 
                     {/* PWA Install Button */}
-                    {isInstallable && (
+                    {!isStandalone && (
                       <button 
                         onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-healthy-green/5 rounded-2xl border border-healthy-green/20 hover:bg-healthy-green/10 transition-colors group"
+                        className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-healthy-green rounded-xl text-white">
+                          <div className="p-2 bg-white/20 rounded-xl text-white">
                             <Download className="w-5 h-5" />
                           </div>
                           <div className="text-left">
-                            <span className="block font-bold text-gray-900">Install PureScan AI</span>
-                            <span className="block text-[10px] text-healthy-green font-medium uppercase tracking-wider">Add to Home Screen</span>
+                            <span className="block font-bold">Install PureScan AI</span>
+                            <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-healthy-green" />
+                        <ChevronRight className="w-5 h-5 text-white" />
                       </button>
                     )}
                   </div>
@@ -1484,7 +1501,7 @@ export default function App() {
 
       {/* PWA Install Popup */}
       <AnimatePresence>
-        {showInstallPopup && isInstallable && (
+        {showInstallPopup && !isStandalone && (
           <motion.div
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -1716,6 +1733,25 @@ export default function App() {
                   These guardrails act as a hard-coded safety layer. However, always verify with the physical label as AI extraction may occasionally miss text.
                 </p>
               </div>
+
+              {/* PWA Install Button */}
+              {!isStandalone && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-xl text-white">
+                      <Download className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <span className="block font-bold">Install PureScan AI</span>
+                      <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-white" />
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -1765,6 +1801,25 @@ export default function App() {
                       While we strive for accuracy, AI models can occasionally misinterpret labels or provide incorrect information. Always verify the information provided by PureScan with the physical product label.
                     </p>
                   </section>
+
+                  {/* PWA Install Button */}
+                  {!isStandalone && (
+                    <button 
+                      onClick={handleInstallClick}
+                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-xl text-white">
+                          <Download className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">Install PureScan AI</span>
+                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white" />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1807,6 +1862,25 @@ export default function App() {
                       </p>
                     </section>
                   </div>
+
+                  {/* PWA Install Button */}
+                  {!isStandalone && (
+                    <button 
+                      onClick={handleInstallClick}
+                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-xl text-white">
+                          <Download className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">Install PureScan AI</span>
+                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white" />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1830,6 +1904,25 @@ export default function App() {
                       We reserve the right to update these terms automatically as we add new features or improve our AI models. Continued use of the app constitutes acceptance of the updated terms.
                     </p>
                   </section>
+
+                  {/* PWA Install Button */}
+                  {!isStandalone && (
+                    <button 
+                      onClick={handleInstallClick}
+                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-xl text-white">
+                          <Download className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">Install PureScan AI</span>
+                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1871,6 +1964,65 @@ export default function App() {
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Install Instructions Modal */}
+      <AnimatePresence>
+        {showInstallInstructions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => setShowInstallInstructions(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-8 max-w-sm w-full space-y-6 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-20 h-20 bg-healthy-green/10 rounded-3xl flex items-center justify-center">
+                  <Download className="w-10 h-10 text-healthy-green" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-gray-900">How to Install</h3>
+                  <p className="text-gray-500 text-sm">
+                    Follow these steps to add PureScan AI to your home screen for the best experience.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">For iOS (Safari)</p>
+                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                    <li>Tap the <span className="font-bold text-healthy-green">Share</span> button (square with arrow)</li>
+                    <li>Scroll down and tap <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
+                    <li>Tap <span className="font-bold text-healthy-green">Add</span> in the top right</li>
+                  </ol>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">For Android (Chrome)</p>
+                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                    <li>Tap the <span className="font-bold text-healthy-green">Menu</span> (three dots)</li>
+                    <li>Tap <span className="font-bold text-healthy-green">Install App</span> or <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
+                  </ol>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInstallInstructions(false)}
+                className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs"
+              >
+                GOT IT
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
