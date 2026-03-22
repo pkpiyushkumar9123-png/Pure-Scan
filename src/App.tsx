@@ -214,6 +214,7 @@ export default function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isIframe = window.self !== window.top;
@@ -249,6 +250,11 @@ export default function App() {
       setTimeout(() => setError(null), 3000);
       return;
     }
+
+    setIsDownloading(true);
+    // Simulate a small delay to make it feel like a download
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    setIsDownloading(false);
 
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -1082,18 +1088,38 @@ export default function App() {
                     {!isStandalone && (
                       <button 
                         onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-2"
+                        disabled={isDownloading}
+                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-2 relative overflow-hidden disabled:opacity-80"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white/20 rounded-xl text-white">
-                            <Download className="w-5 h-5" />
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="p-2 bg-healthy-green rounded-xl text-white">
+                            {isDownloading ? (
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Download className="w-5 h-5 animate-bounce" />
+                            )}
                           </div>
                           <div className="text-left">
-                            <span className="block font-bold">Install PureScan AI</span>
-                            <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                            <span className="block font-bold">
+                              {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                            </span>
+                            <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                              {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                            </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <div className="flex items-center gap-2 relative z-10">
+                          <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                          <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                        </div>
+                        {isDownloading && (
+                          <motion.div 
+                            initial={{ x: '-100%' }}
+                            animate={{ x: '0%' }}
+                            transition={{ duration: 1.2, ease: "easeInOut" }}
+                            className="absolute inset-0 bg-healthy-green/20"
+                          />
+                        )}
                       </button>
                     )}
                   </div>
@@ -1278,18 +1304,38 @@ export default function App() {
                     {!isStandalone && (
                       <button 
                         onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group"
+                        disabled={isDownloading}
+                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden disabled:opacity-80"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white/20 rounded-xl text-white">
-                            <Download className="w-5 h-5" />
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="p-2 bg-healthy-green rounded-xl text-white">
+                            {isDownloading ? (
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Download className="w-5 h-5 animate-bounce" />
+                            )}
                           </div>
                           <div className="text-left">
-                            <span className="block font-bold">Install PureScan AI</span>
-                            <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                            <span className="block font-bold">
+                              {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                            </span>
+                            <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                              {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                            </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <div className="flex items-center gap-2 relative z-10">
+                          <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                          <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                        </div>
+                        {isDownloading && (
+                          <motion.div 
+                            initial={{ x: '-100%' }}
+                            animate={{ x: '0%' }}
+                            transition={{ duration: 1.2, ease: "easeInOut" }}
+                            className="absolute inset-0 bg-healthy-green/20"
+                          />
+                        )}
                       </button>
                     )}
                   </div>
@@ -1518,7 +1564,7 @@ export default function App() {
                     <Download className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight">Install PureScan AI</h3>
+                    <h3 className="text-xl font-black text-gray-900 leading-tight">Download & Install PureScan AI</h3>
                     <p className="text-sm text-gray-500 font-medium">Add to your home screen for instant access</p>
                   </div>
                 </div>
@@ -1560,9 +1606,18 @@ export default function App() {
                 </button>
                 <button 
                   onClick={handleInstallClick}
-                  className="flex-[2] py-4 bg-healthy-green text-white rounded-2xl font-bold text-sm shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
+                  disabled={isDownloading}
+                  className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/20 active:scale-[0.98] transition-all relative overflow-hidden disabled:opacity-80"
                 >
-                  INSTALL NOW
+                  <span className="relative z-10">{isDownloading ? 'DOWNLOADING...' : 'DOWNLOAD NOW'}</span>
+                  {isDownloading && (
+                    <motion.div 
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '0%' }}
+                      transition={{ duration: 1.2, ease: "easeInOut" }}
+                      className="absolute inset-0 bg-healthy-green/30"
+                    />
+                  )}
                 </button>
               </div>
             </div>
@@ -1738,18 +1793,38 @@ export default function App() {
               {!isStandalone && (
                 <button 
                   onClick={handleInstallClick}
-                  className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group"
+                  disabled={isDownloading}
+                  className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden disabled:opacity-80"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-xl text-white">
-                      <Download className="w-5 h-5" />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="p-2 bg-healthy-green rounded-xl text-white">
+                      {isDownloading ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Download className="w-5 h-5 animate-bounce" />
+                      )}
                     </div>
                     <div className="text-left">
-                      <span className="block font-bold">Install PureScan AI</span>
-                      <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                      <span className="block font-bold">
+                        {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                      </span>
+                      <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                        {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                      </span>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-2 relative z-10">
+                    <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                    <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                  </div>
+                  {isDownloading && (
+                    <motion.div 
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '0%' }}
+                      transition={{ duration: 1.2, ease: "easeInOut" }}
+                      className="absolute inset-0 bg-healthy-green/20"
+                    />
+                  )}
                 </button>
               )}
             </div>
@@ -1806,18 +1881,38 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                      disabled={isDownloading}
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-xl text-white">
-                          <Download className="w-5 h-5" />
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="p-2 bg-healthy-green rounded-xl text-white">
+                          {isDownloading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-5 h-5 animate-bounce" />
+                          )}
                         </div>
                         <div className="text-left">
-                          <span className="block font-bold">Install PureScan AI</span>
-                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          <span className="block font-bold">
+                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                          </span>
+                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                          </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-white" />
+                      <div className="flex items-center gap-2 relative z-10">
+                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                      </div>
+                      {isDownloading && (
+                        <motion.div 
+                          initial={{ x: '-100%' }}
+                          animate={{ x: '0%' }}
+                          transition={{ duration: 1.2, ease: "easeInOut" }}
+                          className="absolute inset-0 bg-healthy-green/20"
+                        />
+                      )}
                     </button>
                   )}
                 </div>
@@ -1867,18 +1962,38 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                      disabled={isDownloading}
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-xl text-white">
-                          <Download className="w-5 h-5" />
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="p-2 bg-healthy-green rounded-xl text-white">
+                          {isDownloading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-5 h-5 animate-bounce" />
+                          )}
                         </div>
                         <div className="text-left">
-                          <span className="block font-bold">Install PureScan AI</span>
-                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          <span className="block font-bold">
+                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                          </span>
+                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                          </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-white" />
+                      <div className="flex items-center gap-2 relative z-10">
+                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                      </div>
+                      {isDownloading && (
+                        <motion.div 
+                          initial={{ x: '-100%' }}
+                          animate={{ x: '0%' }}
+                          transition={{ duration: 1.2, ease: "easeInOut" }}
+                          className="absolute inset-0 bg-healthy-green/20"
+                        />
+                      )}
                     </button>
                   )}
                 </div>
@@ -1909,18 +2024,38 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-healthy-green text-white rounded-2xl shadow-lg shadow-healthy-green/20 hover:bg-healthy-green/90 transition-all group mt-8"
+                      disabled={isDownloading}
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-xl text-white">
-                          <Download className="w-5 h-5" />
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="p-2 bg-healthy-green rounded-xl text-white">
+                          {isDownloading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-5 h-5 animate-bounce" />
+                          )}
                         </div>
                         <div className="text-left">
-                          <span className="block font-bold">Install PureScan AI</span>
-                          <span className="block text-[10px] text-white/80 font-medium uppercase tracking-wider">Add to Home Screen</span>
+                          <span className="block font-bold">
+                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                          </span>
+                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                          </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-white" />
+                      <div className="flex items-center gap-2 relative z-10">
+                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
+                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                      </div>
+                      {isDownloading && (
+                        <motion.div 
+                          initial={{ x: '-100%' }}
+                          animate={{ x: '0%' }}
+                          transition={{ duration: 1.2, ease: "easeInOut" }}
+                          className="absolute inset-0 bg-healthy-green/20"
+                        />
+                      )}
                     </button>
                   )}
                 </div>
@@ -1985,13 +2120,14 @@ export default function App() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-20 h-20 bg-healthy-green/10 rounded-3xl flex items-center justify-center">
-                  <Download className="w-10 h-10 text-healthy-green" />
+                <div className="w-20 h-20 bg-gray-900 rounded-3xl flex items-center justify-center relative">
+                  <Download className="w-10 h-10 text-healthy-green animate-bounce" />
+                  <div className="absolute -bottom-2 -right-2 bg-healthy-green text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg">PWA</div>
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-gray-900">How to Install</h3>
+                  <h3 className="text-2xl font-black text-gray-900">Download & Install</h3>
                   <p className="text-gray-500 text-sm">
-                    Follow these steps to add PureScan AI to your home screen for the best experience.
+                    Get the full native experience. Fast, offline-ready, and directly on your home screen.
                   </p>
                 </div>
               </div>
@@ -2010,7 +2146,7 @@ export default function App() {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">For Android (Chrome)</p>
                   <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
                     <li>Tap the <span className="font-bold text-healthy-green">Menu</span> (three dots)</li>
-                    <li>Tap <span className="font-bold text-healthy-green">Install App</span> or <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
+                    <li>Tap <span className="font-bold text-healthy-green">Download & Install App</span> or <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
                   </ol>
                 </div>
               </div>
