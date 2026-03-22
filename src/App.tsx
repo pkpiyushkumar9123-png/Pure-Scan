@@ -686,8 +686,8 @@ export default function App() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-healthy-green rounded-lg flex items-center justify-center">
-            <Scan className="text-white w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+            <img src="/icon.png" alt="PureScan Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
         </div>

@@ -21,12 +21,12 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'https://picsum.photos/seed/purescan/192/192',
+              src: '/icon.png',
               sizes: '192x192',
               type: 'image/png'
             },
             {
-              src: 'https://picsum.photos/seed/purescan/512/512',
+              src: '/icon.png',
               sizes: '512x512',
               type: 'image/png'
             }
