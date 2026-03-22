@@ -19,8 +19,7 @@ import {
   Search,
   Heart,
   Smartphone,
-  Download,
-  Zap
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -97,31 +96,6 @@ const YOUTUBE_VIDEOS = [
 
 // --- Components ---
 
-const Logo = ({ className = "w-8 h-8", iconSize = "w-5 h-5" }: { className?: string; iconSize?: string }) => {
-  const [error, setError] = useState(false);
-  const logoUrl = "https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png";
-
-  if (error) {
-    return (
-      <div className={`${className} bg-healthy-green rounded-lg flex items-center justify-center`}>
-        <Scan className={`text-white ${iconSize}`} />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${className} bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-sm border border-gray-100`}>
-      <img 
-        src={logoUrl} 
-        alt="PureScan AI Logo" 
-        className="w-full h-full object-contain"
-        referrerPolicy="no-referrer"
-        onError={() => setError(true)}
-      />
-    </div>
-  );
-};
-
 const CircularProgress = ({ score, grade }: { score: number; grade: string }) => {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -197,12 +171,7 @@ export default function App() {
     return localStorage.getItem('GEMINI_API_KEY') || '';
   });
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean>(() => {
-    const accepted = localStorage.getItem('purescan_terms_accepted');
-    if (accepted === null) {
-      localStorage.setItem('purescan_terms_accepted', 'true');
-      return true;
-    }
-    return accepted === 'true';
+    return localStorage.getItem('purescan_terms_accepted') === 'true';
   });
   const [anonymousAnalytics, setAnonymousAnalytics] = useState<boolean>(() => {
     return localStorage.getItem('purescan_anonymous_analytics') === 'true';
@@ -213,78 +182,35 @@ export default function App() {
   });
   const [showLegalView, setShowLegalView] = useState<'none' | 'disclaimer' | 'privacy' | 'terms'>('none');
   const [showDietaryView, setShowDietaryView] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false); // Bypass tutorial as requested
+  const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
   const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isIframe = window.self !== window.top;
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
-
+  
   useEffect(() => {
-    const checkStandalone = () => {
-      setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
-    };
-    checkStandalone();
-    
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      // Automatically show the popup immediately if not already installed
-      if (!isStandalone) {
-        setShowInstallPopup(true);
-      }
+      setShowInstallPopup(true);
     };
 
-    if ((window as any).deferredPrompt) {
-      handleBeforeInstallPrompt((window as any).deferredPrompt);
-    }
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // If not standalone and not in iframe, show the install popup after a very brief delay
-    // to ensure the user sees it immediately on open
-    if (!isStandalone && !isIframe) {
-      const timer = setTimeout(() => {
-        setShowInstallPopup(true);
-      }, 500);
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        clearTimeout(timer);
-      };
-    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, [isStandalone, isIframe]);
+  }, []);
 
   const handleInstallClick = async () => {
-    if (isIframe) {
-      setError("Please open the app in a new tab to install it.");
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
-
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstallPopup(false);
-      }
-      setDeferredPrompt(null);
-    } else {
-      // Fallback for iOS or already installed
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS) {
-        setError("To install on iOS: Tap Share ⍐ then 'Add to Home Screen'");
-      } else {
-        setError("To install: Click the install icon in your browser's address bar, or use 'Add to Home Screen' in your browser menu.");
-      }
-      setTimeout(() => setError(null), 5000);
-    }
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallPopup(false);
   };
 
   // Load history from local storage and sync with Supabase
@@ -760,7 +686,9 @@ export default function App() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <Logo className="w-8 h-8" iconSize="w-5 h-5" />
+          <div className="w-8 h-8 bg-healthy-green rounded-lg flex items-center justify-center">
+            <Scan className="text-white w-5 h-5" />
+          </div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
         </div>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -769,11 +697,11 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className={`flex-1 overflow-y-auto pb-24 ${activeTab === 'scan' ? 'flex flex-col' : ''}`}>
+      <main className="flex-1 overflow-y-auto pb-24">
         {activeTab === 'scan' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
+          <div className="p-6 space-y-8">
             {/* Camera Viewfinder & Workflow Screens */}
-            <div className="relative aspect-[3/4] w-full bg-black rounded-3xl overflow-hidden shadow-2xl group">
+            <div className="relative aspect-[3/4] bg-black rounded-3xl overflow-hidden shadow-2xl group">
               {/* Hidden File Input */}
               <input 
                 type="file" 
@@ -845,7 +773,6 @@ export default function App() {
                             <li>Click the <b>Lock icon</b> in your address bar</li>
                             <li>Ensure <b>Camera</b> is set to "Allow"</li>
                           </ul>
-                          <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest mt-4">Point at nutrition label</p>
                         </div>
                       </div>
                     ) : (
@@ -980,8 +907,7 @@ export default function App() {
 
               {/* Scan Button Overlay (Only in idle) */}
               {status === 'idle' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 gap-6">
-                  {!cameraError && <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest">Point at nutrition label</p>}
+                <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4">
                   <div className="flex flex-col items-center gap-3">
                     <motion.button
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -1003,6 +929,7 @@ export default function App() {
                       </button>
                     )}
                   </div>
+                  <p className="text-white/70 text-[10px] font-medium uppercase tracking-widest">Point at nutrition label</p>
                 </div>
               )}
             </div>
@@ -1078,18 +1005,11 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <button 
-                      onClick={() => setShowProfile(true)}
-                      className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="font-medium text-gray-700">Profile</span>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </button>
-
-                    {['Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
+                    {['Profile', 'Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
                     <button 
                       key={item} 
                       onClick={() => {
+                        if (item === 'Profile') setShowProfile(true);
                         if (item === 'Dietary Preferences') setShowDietaryView(true);
                         if (item === 'Medical Disclaimer') setShowLegalView('disclaimer');
                         if (item === 'Privacy Policy') setShowLegalView('privacy');
@@ -1102,31 +1022,6 @@ export default function App() {
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </button>
                   ))}
-
-                    {!isStandalone && (
-                      <button 
-                        onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-2 relative overflow-hidden"
-                      >
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div className="p-2 bg-healthy-green rounded-xl text-white">
-                            <Download className="w-5 h-5 animate-bounce" />
-                          </div>
-                          <div className="text-left">
-                            <span className="block font-bold">
-                              Install App
-                            </span>
-                            <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                              Fast • Offline • Native Experience
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 relative z-10">
-                          <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                          <ChevronRight className="w-5 h-5 text-white/40" />
-                        </div>
-                      </button>
-                    )}
                   </div>
 
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
@@ -1304,32 +1199,6 @@ export default function App() {
                         <p className="font-bold text-gray-900">{history.length}</p>
                       </div>
                     </div>
-
-                    {/* PWA Install Button */}
-                    {!isStandalone && (
-                      <button 
-                        onClick={handleInstallClick}
-                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden"
-                      >
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div className="p-2 bg-healthy-green rounded-xl text-white">
-                            <Download className="w-5 h-5 animate-bounce" />
-                          </div>
-                          <div className="text-left">
-                            <span className="block font-bold">
-                              Install App
-                            </span>
-                            <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                              Fast • Offline • Native Experience
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 relative z-10">
-                          <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                          <ChevronRight className="w-5 h-5 text-white/40" />
-                        </div>
-                      </button>
-                    )}
                   </div>
                 )}
 
@@ -1537,77 +1406,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* PWA Install Popup */}
-      <AnimatePresence>
-        {showInstallPopup && !isStandalone && (
-          <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            className="fixed bottom-24 left-6 right-6 z-[150] max-w-md mx-auto"
-          >
-            <div className="bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 space-y-6 overflow-hidden relative">
-              {/* Background Accent */}
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-healthy-green/5 rounded-full blur-3xl" />
-              
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-healthy-green rounded-2xl flex items-center justify-center shadow-lg shadow-healthy-green/20">
-                    <Download className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight">Download & Install PureScan AI</h3>
-                    <p className="text-sm text-gray-500 font-medium">Add to your home screen for instant access</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowInstallPopup(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    <Zap className="w-4 h-4 text-healthy-green" />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Faster</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    <History className="w-4 h-4 text-healthy-green" />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Offline</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-2xl text-center space-y-1">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
-                    <CheckCircle2 className="w-4 h-4 text-healthy-green" />
-                  </div>
-                  <p className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Native</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowInstallPopup(false)}
-                  className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors"
-                >
-                  NOT NOW
-                </button>
-                <button 
-                  onClick={handleInstallClick}
-                  className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/20 active:scale-[0.98] transition-all relative overflow-hidden"
-                >
-                  <span className="relative z-10">INSTALL NOW</span>
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Error Toast */}
       <AnimatePresence>
         {error && (
@@ -1634,7 +1432,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 px-8 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between z-10 max-w-md mx-auto">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-8 py-4 flex items-center justify-between z-10 max-w-md mx-auto">
         <NavButton 
           active={activeTab === 'scan'} 
           onClick={() => setActiveTab('scan')} 
@@ -1662,47 +1460,47 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-white overflow-y-auto"
+            className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
           >
-            <div className="min-h-full flex flex-col p-8">
-              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 py-8">
-                <Logo className="w-32 h-32 rounded-[40px]" iconSize="w-16 h-16" />
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
-                  <p className="text-healthy-green font-bold text-lg leading-tight px-4">
-                    Scan the Label. Know the Truth. Make your life 1 step more Improved!
-                  </p>
-                  <p className="text-gray-500 text-sm leading-relaxed px-2">
-                    Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
-                  </p>
-                </div>
-
-                <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-warning-amber" />
-                    Medical Disclaimer
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
-                  </p>
-                </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
+              <div className="w-20 h-20 bg-healthy-green rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20">
+                <Scan className="text-white w-10 h-10" />
               </div>
-
-              <div className="space-y-4 pt-4">
-                <button 
-                  onClick={() => {
-                    setHasAcceptedTerms(true);
-                    localStorage.setItem('purescan_terms_accepted', 'true');
-                    setShowOnboarding(false);
-                  }}
-                  className="w-full py-5 bg-healthy-green text-white rounded-2xl font-bold shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
-                >
-                  ACCEPT & CONTINUE
-                </button>
-                <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold">
-                  By continuing, you agree to our Terms & Privacy Policy
+              <div className="space-y-4">
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
+                <p className="text-healthy-green font-bold text-lg leading-tight px-4">
+                  Scan the Label. Know the Truth. Make your life 1 step more Improved!
+                </p>
+                <p className="text-gray-500 text-sm leading-relaxed px-2">
+                  Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
                 </p>
               </div>
+
+              <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-warning-amber" />
+                  Medical Disclaimer
+                </h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  setHasAcceptedTerms(true);
+                  localStorage.setItem('purescan_terms_accepted', 'true');
+                  setShowOnboarding(false);
+                }}
+                className="w-full py-5 bg-healthy-green text-white rounded-2xl font-bold shadow-xl shadow-healthy-green/20 active:scale-[0.98] transition-all"
+              >
+                ACCEPT & CONTINUE
+              </button>
+              <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold">
+                By continuing, you agree to our Terms & Privacy Policy
+              </p>
             </div>
           </motion.div>
         )}
@@ -1771,32 +1569,6 @@ export default function App() {
                   These guardrails act as a hard-coded safety layer. However, always verify with the physical label as AI extraction may occasionally miss text.
                 </p>
               </div>
-
-              {/* PWA Install Button */}
-              {!isStandalone && (
-                <button 
-                  onClick={handleInstallClick}
-                  className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3 relative z-10">
-                    <div className="p-2 bg-healthy-green rounded-xl text-white">
-                      <Download className="w-5 h-5 animate-bounce" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">
-                        Install App
-                      </span>
-                      <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                        Fast • Offline • Native Experience
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 relative z-10">
-                    <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                    <ChevronRight className="w-5 h-5 text-white/40" />
-                  </div>
-                </button>
-              )}
             </div>
           </motion.div>
         )}
@@ -1846,32 +1618,6 @@ export default function App() {
                       While we strive for accuracy, AI models can occasionally misinterpret labels or provide incorrect information. Always verify the information provided by PureScan with the physical product label.
                     </p>
                   </section>
-
-                  {/* PWA Install Button */}
-                  {!isStandalone && (
-                    <button 
-                      onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
-                    >
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          <Download className="w-5 h-5 animate-bounce" />
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">
-                            Install App
-                          </span>
-                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            Fast • Offline • Native Experience
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 relative z-10">
-                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className="w-5 h-5 text-white/40" />
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -1914,32 +1660,6 @@ export default function App() {
                       </p>
                     </section>
                   </div>
-
-                  {/* PWA Install Button */}
-                  {!isStandalone && (
-                    <button 
-                      onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
-                    >
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          <Download className="w-5 h-5 animate-bounce" />
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">
-                            Install App
-                          </span>
-                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            Fast • Offline • Native Experience
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 relative z-10">
-                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className="w-5 h-5 text-white/40" />
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -1963,36 +1683,56 @@ export default function App() {
                       We reserve the right to update these terms automatically as we add new features or improve our AI models. Continued use of the app constitutes acceptance of the updated terms.
                     </p>
                   </section>
-
-                  {/* PWA Install Button */}
-                  {!isStandalone && (
-                    <button 
-                      onClick={handleInstallClick}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
-                    >
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          <Download className="w-5 h-5 animate-bounce" />
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">
-                            Install App
-                          </span>
-                          <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            Fast • Offline • Native Experience
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 relative z-10">
-                        <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className="w-5 h-5 text-white/40" />
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PWA Install Popup */}
+      <AnimatePresence>
+        {showInstallPopup && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInstallPopup(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
+                <Smartphone className="w-8 h-8 text-healthy-green" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-gray-900">Install PureScan AI</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Install PureScan AI on your home screen for faster access and a better experience.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleInstallClick}
+                  className="w-full py-4 bg-healthy-green text-white rounded-2xl font-bold shadow-lg shadow-healthy-green/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  INSTALL NOW
+                </button>
+                <button
+                  onClick={() => setShowInstallPopup(false)}
+                  className="w-full py-4 bg-gray-50 text-gray-500 rounded-2xl font-bold active:scale-[0.98] transition-all"
+                >
+                  MAYBE LATER
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
