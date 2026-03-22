@@ -238,6 +238,10 @@ export default function App() {
       }
     };
 
+    if ((window as any).deferredPrompt) {
+      handleBeforeInstallPrompt((window as any).deferredPrompt);
+    }
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     // If not standalone and not in iframe, show the install popup after a very brief delay
@@ -277,9 +281,9 @@ export default function App() {
       if (isIOS) {
         setError("To install on iOS: Tap Share ⍐ then 'Add to Home Screen'");
       } else {
-        setError("App is already installed or install not supported by browser.");
+        setError("To install: Click the install icon in your browser's address bar, or use 'Add to Home Screen' in your browser menu.");
       }
-      setTimeout(() => setError(null), 4000);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
