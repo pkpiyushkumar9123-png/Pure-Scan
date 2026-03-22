@@ -1462,7 +1462,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
           >
-            <div className="flex-1 overflow-y-auto flex flex-col items-center text-center space-y-8 py-4">
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
               <div className="w-20 h-20 bg-healthy-green rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20">
                 <Scan className="text-white w-10 h-10" />
               </div>
