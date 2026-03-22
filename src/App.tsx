@@ -218,8 +218,6 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
-  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isIframe = window.self !== window.top;
@@ -266,10 +264,6 @@ export default function App() {
       return;
     }
 
-    setIsDownloading(true);
-    // No simulated delay for "direct download" feel
-    setIsDownloading(false);
-
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
@@ -278,8 +272,14 @@ export default function App() {
       }
       setDeferredPrompt(null);
     } else {
-      // Fallback for iOS or when prompt is not available
-      setShowInstallInstructions(true);
+      // Fallback for iOS or already installed
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        setError("To install on iOS: Tap Share ⍐ then 'Add to Home Screen'");
+      } else {
+        setError("App is already installed or install not supported by browser.");
+      }
+      setTimeout(() => setError(null), 4000);
     }
   };
 
@@ -1102,38 +1102,25 @@ export default function App() {
                     {!isStandalone && (
                       <button 
                         onClick={handleInstallClick}
-                        disabled={isDownloading}
-                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-2 relative overflow-hidden disabled:opacity-80"
+                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-2 relative overflow-hidden"
                       >
                         <div className="flex items-center gap-3 relative z-10">
                           <div className="p-2 bg-healthy-green rounded-xl text-white">
-                            {isDownloading ? (
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Download className="w-5 h-5 animate-bounce" />
-                            )}
+                            <Download className="w-5 h-5 animate-bounce" />
                           </div>
                           <div className="text-left">
                             <span className="block font-bold">
-                              {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                              Install App
                             </span>
                             <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                              {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                              Fast • Offline • Native Experience
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 relative z-10">
                           <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                          <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                          <ChevronRight className="w-5 h-5 text-white/40" />
                         </div>
-                        {isDownloading && (
-                          <motion.div 
-                            initial={{ x: '-100%' }}
-                            animate={{ x: '0%' }}
-                            transition={{ duration: 1.2, ease: "easeInOut" }}
-                            className="absolute inset-0 bg-healthy-green/20"
-                          />
-                        )}
                       </button>
                     )}
                   </div>
@@ -1318,38 +1305,25 @@ export default function App() {
                     {!isStandalone && (
                       <button 
                         onClick={handleInstallClick}
-                        disabled={isDownloading}
-                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden disabled:opacity-80"
+                        className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden"
                       >
                         <div className="flex items-center gap-3 relative z-10">
                           <div className="p-2 bg-healthy-green rounded-xl text-white">
-                            {isDownloading ? (
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Download className="w-5 h-5 animate-bounce" />
-                            )}
+                            <Download className="w-5 h-5 animate-bounce" />
                           </div>
                           <div className="text-left">
                             <span className="block font-bold">
-                              {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                              Install App
                             </span>
                             <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                              {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                              Fast • Offline • Native Experience
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 relative z-10">
                           <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                          <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                          <ChevronRight className="w-5 h-5 text-white/40" />
                         </div>
-                        {isDownloading && (
-                          <motion.div 
-                            initial={{ x: '-100%' }}
-                            animate={{ x: '0%' }}
-                            transition={{ duration: 1.2, ease: "easeInOut" }}
-                            className="absolute inset-0 bg-healthy-green/20"
-                          />
-                        )}
                       </button>
                     )}
                   </div>
@@ -1620,18 +1594,9 @@ export default function App() {
                 </button>
                 <button 
                   onClick={handleInstallClick}
-                  disabled={isDownloading}
-                  className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/20 active:scale-[0.98] transition-all relative overflow-hidden disabled:opacity-80"
+                  className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/20 active:scale-[0.98] transition-all relative overflow-hidden"
                 >
-                  <span className="relative z-10">{isDownloading ? 'DOWNLOADING...' : 'DOWNLOAD NOW'}</span>
-                  {isDownloading && (
-                    <motion.div 
-                      initial={{ x: '-100%' }}
-                      animate={{ x: '0%' }}
-                      transition={{ duration: 1.2, ease: "easeInOut" }}
-                      className="absolute inset-0 bg-healthy-green/30"
-                    />
-                  )}
+                  <span className="relative z-10">INSTALL NOW</span>
                 </button>
               </div>
             </div>
@@ -1665,7 +1630,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-8 py-4 flex items-center justify-between z-10 max-w-md mx-auto">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 px-8 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between z-10 max-w-md mx-auto">
         <NavButton 
           active={activeTab === 'scan'} 
           onClick={() => setActiveTab('scan')} 
@@ -1807,38 +1772,25 @@ export default function App() {
               {!isStandalone && (
                 <button 
                   onClick={handleInstallClick}
-                  disabled={isDownloading}
-                  className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden disabled:opacity-80"
+                  className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group relative overflow-hidden"
                 >
                   <div className="flex items-center gap-3 relative z-10">
                     <div className="p-2 bg-healthy-green rounded-xl text-white">
-                      {isDownloading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Download className="w-5 h-5 animate-bounce" />
-                      )}
+                      <Download className="w-5 h-5 animate-bounce" />
                     </div>
                     <div className="text-left">
                       <span className="block font-bold">
-                        {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                        Install App
                       </span>
                       <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                        {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                        Fast • Offline • Native Experience
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 relative z-10">
                     <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                    <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                    <ChevronRight className="w-5 h-5 text-white/40" />
                   </div>
-                  {isDownloading && (
-                    <motion.div 
-                      initial={{ x: '-100%' }}
-                      animate={{ x: '0%' }}
-                      transition={{ duration: 1.2, ease: "easeInOut" }}
-                      className="absolute inset-0 bg-healthy-green/20"
-                    />
-                  )}
                 </button>
               )}
             </div>
@@ -1895,38 +1847,25 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      disabled={isDownloading}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
                     >
                       <div className="flex items-center gap-3 relative z-10">
                         <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          {isDownloading ? (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Download className="w-5 h-5 animate-bounce" />
-                          )}
+                          <Download className="w-5 h-5 animate-bounce" />
                         </div>
                         <div className="text-left">
                           <span className="block font-bold">
-                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                            Install App
                           </span>
                           <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                            Fast • Offline • Native Experience
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 relative z-10">
                         <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                        <ChevronRight className="w-5 h-5 text-white/40" />
                       </div>
-                      {isDownloading && (
-                        <motion.div 
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '0%' }}
-                          transition={{ duration: 1.2, ease: "easeInOut" }}
-                          className="absolute inset-0 bg-healthy-green/20"
-                        />
-                      )}
                     </button>
                   )}
                 </div>
@@ -1976,38 +1915,25 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      disabled={isDownloading}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
                     >
                       <div className="flex items-center gap-3 relative z-10">
                         <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          {isDownloading ? (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Download className="w-5 h-5 animate-bounce" />
-                          )}
+                          <Download className="w-5 h-5 animate-bounce" />
                         </div>
                         <div className="text-left">
                           <span className="block font-bold">
-                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                            Install App
                           </span>
                           <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                            Fast • Offline • Native Experience
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 relative z-10">
                         <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                        <ChevronRight className="w-5 h-5 text-white/40" />
                       </div>
-                      {isDownloading && (
-                        <motion.div 
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '0%' }}
-                          transition={{ duration: 1.2, ease: "easeInOut" }}
-                          className="absolute inset-0 bg-healthy-green/20"
-                        />
-                      )}
                     </button>
                   )}
                 </div>
@@ -2038,38 +1964,25 @@ export default function App() {
                   {!isStandalone && (
                     <button 
                       onClick={handleInstallClick}
-                      disabled={isDownloading}
-                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden disabled:opacity-80"
+                      className="w-full flex items-center justify-between p-4 bg-gray-900 text-white rounded-2xl shadow-xl shadow-gray-900/20 hover:bg-gray-800 transition-all group mt-8 relative overflow-hidden"
                     >
                       <div className="flex items-center gap-3 relative z-10">
                         <div className="p-2 bg-healthy-green rounded-xl text-white">
-                          {isDownloading ? (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Download className="w-5 h-5 animate-bounce" />
-                          )}
+                          <Download className="w-5 h-5 animate-bounce" />
                         </div>
                         <div className="text-left">
                           <span className="block font-bold">
-                            {isDownloading ? 'Preparing Download...' : 'Download & Install App'}
+                            Install App
                           </span>
                           <span className="block text-[10px] text-white/60 font-medium uppercase tracking-wider">
-                            {isDownloading ? 'Fetching assets...' : 'Fast • Offline • Native Experience'}
+                            Fast • Offline • Native Experience
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 relative z-10">
                         <span className="text-[10px] font-black bg-healthy-green px-2 py-1 rounded-md">PWA</span>
-                        <ChevronRight className={`w-5 h-5 text-white/40 ${isDownloading ? 'opacity-0' : ''}`} />
+                        <ChevronRight className="w-5 h-5 text-white/40" />
                       </div>
-                      {isDownloading && (
-                        <motion.div 
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '0%' }}
-                          transition={{ duration: 1.2, ease: "easeInOut" }}
-                          className="absolute inset-0 bg-healthy-green/20"
-                        />
-                      )}
                     </button>
                   )}
                 </div>
@@ -2113,66 +2026,6 @@ export default function App() {
               </button>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* Install Instructions Modal */}
-      <AnimatePresence>
-        {showInstallInstructions && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
-            onClick={() => setShowInstallInstructions(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 max-w-sm w-full space-y-6 shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-20 h-20 bg-gray-900 rounded-3xl flex items-center justify-center relative">
-                  <Download className="w-10 h-10 text-healthy-green animate-bounce" />
-                  <div className="absolute -bottom-2 -right-2 bg-healthy-green text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg">PWA</div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-gray-900">Download & Install</h3>
-                  <p className="text-gray-500 text-sm">
-                    Get the full native experience. Fast, offline-ready, and directly on your home screen.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">For iOS (Safari)</p>
-                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                    <li>Tap the <span className="font-bold text-healthy-green">Share</span> button (square with arrow)</li>
-                    <li>Scroll down and tap <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
-                    <li>Tap <span className="font-bold text-healthy-green">Add</span> in the top right</li>
-                  </ol>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">For Android (Chrome)</p>
-                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                    <li>Tap the <span className="font-bold text-healthy-green">Menu</span> (three dots)</li>
-                    <li>Tap <span className="font-bold text-healthy-green">Download & Install App</span> or <span className="font-bold text-healthy-green">Add to Home Screen</span></li>
-                  </ol>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowInstallInstructions(false)}
-                className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs"
-              >
-                GOT IT
-              </button>
-            </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
 
