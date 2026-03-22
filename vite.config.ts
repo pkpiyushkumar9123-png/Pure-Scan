@@ -12,25 +12,55 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        manifestFilename: 'manifest.json',
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
         manifest: {
-          name: 'PureScan - Health First',
+          name: 'PureScan AI',
           short_name: 'PureScan',
-          description: 'Scan food ingredients and get instant health grades.',
-          theme_color: '#065f46',
+          description: 'Scan the Label. Know the Truth. Make your life 1 step more Improved!',
+          theme_color: '#10B981',
           background_color: '#ffffff',
           display: 'standalone',
+          start_url: '/?utm_source=pwa',
+          scope: '/',
+          orientation: 'portrait',
           icons: [
             {
-              src: 'https://picsum.photos/seed/purescan/192/192',
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
-              src: 'https://picsum.photos/seed/purescan/512/512',
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: 'https://storage.googleapis.com/static.antigravity.dev/aistudio/attachments/2026-03-18/1742365225330_PureScan_Logo.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
+        },
+        devOptions: {
+          enabled: true,
+          type: 'module'
         }
       })
     ],
