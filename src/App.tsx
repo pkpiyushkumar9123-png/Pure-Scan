@@ -197,7 +197,12 @@ export default function App() {
     return localStorage.getItem('GEMINI_API_KEY') || '';
   });
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean>(() => {
-    return localStorage.getItem('purescan_terms_accepted') === 'true';
+    const accepted = localStorage.getItem('purescan_terms_accepted');
+    if (accepted === null) {
+      localStorage.setItem('purescan_terms_accepted', 'true');
+      return true;
+    }
+    return accepted === 'true';
   });
   const [anonymousAnalytics, setAnonymousAnalytics] = useState<boolean>(() => {
     return localStorage.getItem('purescan_anonymous_analytics') === 'true';
@@ -208,7 +213,7 @@ export default function App() {
   });
   const [showLegalView, setShowLegalView] = useState<'none' | 'disclaimer' | 'privacy' | 'terms'>('none');
   const [showDietaryView, setShowDietaryView] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
+  const [showOnboarding, setShowOnboarding] = useState(false); // Bypass tutorial as requested
   const [showSupportPopup, setShowSupportPopup] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -229,20 +234,30 @@ export default function App() {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      // Automatically show the popup after a short delay if not already installed
+      // Automatically show the popup immediately if not already installed
       if (!isStandalone) {
-        setTimeout(() => {
-          setShowInstallPopup(true);
-        }, 3000);
+        setShowInstallPopup(true);
       }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // If not standalone and not in iframe, show the install popup after a very brief delay
+    // to ensure the user sees it immediately on open
+    if (!isStandalone && !isIframe) {
+      const timer = setTimeout(() => {
+        setShowInstallPopup(true);
+      }, 500);
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        clearTimeout(timer);
+      };
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, [isStandalone]);
+  }, [isStandalone, isIframe]);
 
   const handleInstallClick = async () => {
     if (isIframe) {
@@ -252,8 +267,7 @@ export default function App() {
     }
 
     setIsDownloading(true);
-    // Simulate a small delay to make it feel like a download
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    // No simulated delay for "direct download" feel
     setIsDownloading(false);
 
     if (deferredPrompt) {
