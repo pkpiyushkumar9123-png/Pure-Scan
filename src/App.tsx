@@ -624,8 +624,8 @@ export default function App() {
     return canvas.toDataURL('image/jpeg');
   };
 
-  const handleScan = async () => {
-    let imageToDetect = capturedImage;
+  const handleScan = async (image?: string) => {
+    let imageToDetect = image || capturedImage;
 
     if (!imageToDetect && videoRef.current && canvasRef.current) {
       const video = videoRef.current;
@@ -660,9 +660,10 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCapturedImage(reader.result as string);
+        const result = reader.result as string;
+        setCapturedImage(result);
         setCameraError(null);
-        handleScan();
+        handleScan(result);
       };
       reader.readAsDataURL(file);
     }
@@ -913,7 +914,7 @@ export default function App() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={handleScan}
+                      onClick={() => handleScan()}
                       className="bg-healthy-green text-white px-8 py-4 rounded-full font-bold shadow-xl flex items-center gap-3 hover:bg-green-800 transition-colors"
                     >
                       <Scan className="w-6 h-6" />
@@ -923,7 +924,7 @@ export default function App() {
                     {!cameraError && (
                       <button 
                         onClick={triggerFileUpload}
-                        className="text-white/80 text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors"
+                        className="text-white bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/20 transition-colors border border-white/20"
                       >
                         Or Upload Photo
                       </button>
