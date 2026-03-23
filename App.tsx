@@ -1464,8 +1464,8 @@ export default function App() {
             className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-              <div className="w-20 h-20 bg-healthy-green rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20">
-                <Scan className="text-white w-10 h-10" />
+              <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20 overflow-hidden">
+                <img src="/icon.png" alt="PureScan Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="space-y-4">
                 <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
