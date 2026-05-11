@@ -176,6 +176,9 @@ export default function App() {
   const [anonymousAnalytics, setAnonymousAnalytics] = useState<boolean>(() => {
     return localStorage.getItem('purescan_anonymous_analytics') === 'true';
   });
+  const [autoScan, setAutoScan] = useState<boolean>(() => {
+    return localStorage.getItem('purescan_auto_scan') === 'true';
+  });
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>(() => {
     const saved = localStorage.getItem('purescan_dietary_preferences');
     return saved ? JSON.parse(saved) : ['Wheat', 'Barley', 'Rye'];
@@ -342,6 +345,39 @@ export default function App() {
     localStorage.setItem('GEMINI_API_KEY', key);
   };
 
+  const cropImageDirectly = async (imageSrc: string, box: { x: number; y: number; width: number; height: number }) => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise(resolve => image.onload = resolve);
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Convert normalized coordinates (0-1000) to actual pixels
+    const px = (box.x / 1000) * image.width;
+    const py = (box.y / 1000) * image.height;
+    const pw = (box.width / 1000) * image.width;
+    const ph = (box.height / 1000) * image.height;
+
+    canvas.width = pw;
+    canvas.height = ph;
+
+    ctx.drawImage(
+      image,
+      px,
+      py,
+      pw,
+      ph,
+      0,
+      0,
+      pw,
+      ph
+    );
+
+    return canvas.toDataURL('image/jpeg');
+  };
+
   const autoDetectLabel = async (base64Data: string) => {
     try {
       setStatus('detecting');
@@ -390,30 +426,44 @@ export default function App() {
         return;
       }
       
-      // Calculate initial crop and zoom for react-easy-crop
-      // This is a rough estimation to center the detected box
-      const zoomVal = Math.max(1, Math.min(3, 800 / Math.max(box.width, box.height)));
-      setZoom(zoomVal);
-      
-      // react-easy-crop 'crop' is displacement from center in percentage
-      // Normalized center of box:
-      const ncx = (box.x + box.width / 2) / 1000;
-      const ncy = (box.y + box.height / 2) / 1000;
-      
-      // Convert to react-easy-crop displacement
-      // This is still an approximation as it depends on image aspect ratio
-      setCrop({
-        x: (0.5 - ncx) * 100 * zoomVal,
-        y: (0.5 - ncy) * 100 * zoomVal
-      });
+      if (autoScan) {
+        const cropped = await cropImageDirectly(base64Data, box);
+        if (cropped) {
+          setCroppedImage(cropped);
+          await extractIngredients(cropped);
+        } else {
+          throw new Error("Direct cropping failed");
+        }
+      } else {
+        // Calculate initial crop and zoom for react-easy-crop
+        // This is a rough estimation to center the detected box
+        const zoomVal = Math.max(1, Math.min(3, 800 / Math.max(box.width, box.height)));
+        setZoom(zoomVal);
+        
+        // react-easy-crop 'crop' is displacement from center in percentage
+        // Normalized center of box:
+        const ncx = (box.x + box.width / 2) / 1000;
+        const ncy = (box.y + box.height / 2) / 1000;
+        
+        // Convert to react-easy-crop displacement
+        setCrop({
+          x: (0.5 - ncx) * 100 * zoomVal,
+          y: (0.5 - ncy) * 100 * zoomVal
+        });
 
-      setStatus('cropping');
+        setStatus('cropping');
+      }
     } catch (error) {
       console.error("Auto-detection failed:", error);
-      // Fallback to manual crop
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
-      setStatus('cropping');
+      if (autoScan) {
+        // If auto scan fails, fallback to full image extraction
+        await extractIngredients(base64Data);
+      } else {
+        // Fallback to manual crop
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setStatus('cropping');
+      }
     }
   };
 
@@ -445,7 +495,11 @@ export default function App() {
 
       const text = response.text || "";
       setExtractedIngredients(text);
-      setStatus('editing');
+      if (autoScan && text && text !== "No ingredients detected") {
+        await analyzeIngredients(text);
+      } else {
+        setStatus('editing');
+      }
     } catch (error) {
       console.error("AI Extraction failed:", error);
       setError("Failed to extract ingredients. Please check your API key or try again.");
@@ -1071,6 +1125,28 @@ export default function App() {
                         className={`w-12 h-6 rounded-full transition-colors relative ${anonymousAnalytics ? 'bg-healthy-green' : 'bg-gray-200'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${anonymousAnalytics ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 rounded-xl">
+                          <RefreshCw className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <h3 className="font-bold text-gray-900">Auto Scan</h3>
+                          <p className="text-[10px] text-gray-500">Bypass review steps for instant data (15s goal)</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const newValue = !autoScan;
+                          setAutoScan(newValue);
+                          localStorage.setItem('purescan_auto_scan', String(newValue));
+                        }}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${autoScan ? 'bg-healthy-green' : 'bg-gray-200'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoScan ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
                     <p className="text-sm text-gray-500">
