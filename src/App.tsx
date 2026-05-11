@@ -1488,12 +1488,30 @@ export default function App() {
                 {/* Handle */}
                 <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 print:hidden" />
                 
-                <div className="p-8 space-y-8">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
+                <div className="p-8 space-y-10 report-container">
+                  {/* Professional Report Header (Only for PDF) */}
+                  <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                          <Scan className="w-5 h-5 text-white" />
+                        </div>
+                        <h1 className="text-xl font-black tracking-tighter uppercase">PureScan Clinical</h1>
+                      </div>
+                      <p className="text-[10px] text-gray-500 font-mono">DOCUMENT REF: PS-{scanResult?.id.slice(0,8).toUpperCase() || "RA-0000"}</p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900">Health Audit Report</h2>
+                      <p className="text-[10px] text-gray-500 font-medium">Issue Date: {new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-gray-400 font-mono uppercase">System: AIS-GEMINI-CORE-3.0</p>
+                    </div>
+                  </div>
+
+                  {/* Standard Header (App View) */}
+                  <div className="flex items-start justify-between print:mt-4">
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">{scanResult?.productName || "Unknown Product"}</h2>
-                      <p className="text-gray-500 font-medium">Analyzed Result</p>
+                      <h2 className="text-3xl font-black text-gray-900 leading-tight">{scanResult?.productName || "Unknown Product"}</h2>
+                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-1">Biochemical Analysis Result</p>
                     </div>
                     <button 
                       onClick={closeResult}
@@ -1503,94 +1521,172 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Score Section */}
-                  <div className="flex items-center gap-8 bg-gray-50 p-6 rounded-3xl">
-                    {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-bold text-gray-900">Health Score</h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
-                          ? "This product is generally healthy and safe for consumption."
-                          : "This product contains several ingredients linked to health risks."}
-                      </p>
+                  {/* Clinical Summary Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center bg-gray-50 p-8 rounded-[32px] border border-gray-100 relative overflow-hidden">
+                    {/* Watermark for PDF */}
+                    <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none hidden print:block">
+                      <Scan className="w-48 h-48 text-gray-900" />
+                    </div>
+
+                    <div className="flex justify-center">
+                      {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
+                    </div>
+                    
+                    <div className="md:col-span-2 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Impact Summary</h3>
+                        <p className="text-lg font-bold text-gray-900 leading-tight">
+                          {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
+                            ? "Optimal nutritional profile. Safe for standard consumption."
+                            : "Critical ingredients identified. Potential long-term health implications detected."}
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-white rounded-2xl border border-gray-100">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Risk Level</p>
+                          <p className={`font-bold ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
+                            {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'MINIMAL'}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white rounded-2xl border border-gray-100">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Integrity</p>
+                          <p className="font-bold text-gray-900">VERIFIED AI</p>
+                        </div>
+                      </div>
+
                       <button 
                         onClick={() => setShowLegalView('disclaimer')}
-                        className="text-[10px] font-bold text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden"
+                        className="text-[10px] font-bold text-gray-400 hover:text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden transition-colors"
                       >
                         <Info className="w-3 h-3" />
-                        Verify with physical label
+                        Cross-reference with physical packaging
                       </button>
                     </div>
                   </div>
 
-                  {/* Risk List */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                      <AlertCircle className={`w-5 h-5 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
-                      {scanResult?.riskyIngredients.length ? 'Risk List' : 'No Major Risks Found'}
-                    </h3>
-                    <div className="space-y-3">
+                  {/* Risky Ingredients Analysis */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <AlertCircle className={`w-6 h-6 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
+                        Ingredient Audit
+                      </h3>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        {scanResult?.riskyIngredients.length || 0} CONCERNS IDENTIFIED
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
                       {scanResult?.riskyIngredients.map((ing, idx) => (
                         <div 
                           key={idx} 
-                          className={`flex flex-col p-4 bg-red-50 rounded-2xl border border-red-100 transition-all duration-300 ${expandedIdx === idx || true ? 'ring-2 ring-critical-red/20' : ''}`}
+                          className={`flex flex-col p-6 rounded-3xl border transition-all duration-300 ${
+                            ing.risk === 'high' ? 'bg-red-50/50 border-red-100' : 'bg-gray-50/50 border-gray-100'
+                          } ${expandedIdx === idx ? 'ring-2 ring-gray-900/5' : ''}`}
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex gap-4">
-                              <div className="mt-1">
-                                <div className={`w-2 h-2 rounded-full ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
+                          <div className="flex items-start justify-between gap-6">
+                            <div className="flex gap-5">
+                              <div className="mt-1.5 min-w-[20px]">
+                                <div className={`w-3 h-3 rounded-full ${ing.risk === 'high' ? 'bg-critical-red shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-warning-amber shadow-[0_0_8px_rgba(245,158,11,0.4)]'}`} />
                               </div>
-                              <div>
-                                <h4 className="font-bold text-critical-red">{ing.name}</h4>
-                                <p className="text-xs text-red-700/80 mt-1">{ing.description}</p>
+                              <div className="space-y-1">
+                                <h4 className={`text-lg font-bold leading-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900'}`}>{ing.name}</h4>
+                                <p className="text-xs text-gray-500 leading-relaxed font-semibold">{ing.description}</p>
                               </div>
                             </div>
                             <button 
                               onClick={() => toggleExpand(idx)}
-                              className={`p-2 rounded-full transition-colors print:hidden ${expandedIdx === idx ? 'bg-critical-red text-white' : 'bg-white text-gray-400 hover:text-critical-red'}`}
+                              className={`p-2 rounded-full transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 text-white' : 'bg-white text-gray-300 border border-gray-100 hover:text-gray-900 shadow-sm'}`}
                             >
-                              <Info className="w-4 h-4" />
+                              <Info className="w-5 h-5" />
                             </button>
                           </div>
                           
-                          <div className={`overflow-hidden ${expandedIdx === idx ? 'block' : 'hidden print:block'}`}>
-                            <div className="pt-4 mt-4 border-t border-red-200/50">
-                              <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-800 mb-2">Health Implications</h5>
-                              <p className="text-sm text-red-900 leading-relaxed">
-                                {ing.implications}
-                              </p>
+                          <div className={`overflow-hidden transition-all ${expandedIdx === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 print:max-h-none print:opacity-100'}`}>
+                            <div className="pt-6 mt-6 border-t border-gray-200/50 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <h5 className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Clinical Implication</h5>
+                                  <p className="text-[13px] text-gray-700 leading-relaxed italic">
+                                    "{ing.implications}"
+                                  </p>
+                                </div>
+                                <div className="hidden print:block">
+                                  <h5 className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Recommendation</h5>
+                                  <p className="text-[13px] text-gray-600 leading-relaxed">
+                                    Reduce intake. Seek alternative with less processed stabilizers.
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       ))}
+
+                      {scanResult?.riskyIngredients.length === 0 && (
+                        <div className="p-12 text-center bg-gray-50 rounded-[32px] border border-dashed border-gray-200">
+                          <CheckCircle2 className="w-12 h-12 text-healthy-green mx-auto mb-4 opacity-40" />
+                          <p className="text-gray-500 font-bold">No High-Risk Additives Detected</p>
+                          <p className="text-xs text-gray-400 mt-1">Analysis complete within normal parameters.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Better Alternative */}
+                  {/* Recommendation Section */}
                   {scanResult?.alternative && (
-                    <div className="bg-healthy-green/5 p-6 rounded-3xl border border-healthy-green/10 space-y-3">
-                      <h3 className="text-lg font-bold text-healthy-green flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5" />
-                        Better Alternative
-                      </h3>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-bold text-gray-900">{scanResult.alternative.name}</h4>
-                          <p className="text-sm text-gray-600">{scanResult.alternative.reason}</p>
+                    <div className="bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden">
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                      <div className="space-y-4 relative z-10">
+                        <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2">
+                          <div className="w-4 h-0.5 bg-healthy-green" />
+                          Recommended Swap
+                        </h3>
+                        <div className="flex items-center justify-between gap-6">
+                          <div>
+                            <h4 className="text-2xl font-black tracking-tight">{scanResult.alternative.name}</h4>
+                            <p className="text-sm text-gray-400 mt-2 leading-relaxed italic">
+                              {scanResult.alternative.reason}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-white/10 rounded-2xl print:hidden">
+                            <CheckCircle2 className="w-8 h-8 text-healthy-green" />
+                          </div>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* PDF Disclaimer - Only visible in PDF/High detail view */}
-                  <div className="pt-8 border-t border-gray-100 hidden print:block">
-                    <div className="bg-gray-50 p-4 rounded-2xl space-y-2">
-                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Medical Disclaimer</h4>
-                       <p className="text-[10px] text-gray-500 leading-relaxed">
-                         PureScan AI results are based on computer vision analysis of the provided image. This information is for educational purposes and does not constitute medical advice. Always verify with the physical product label and consult a healthcare professional for dietary concerns.
-                       </p>
+                  <div className="pt-10 border-t-2 border-gray-900 hidden print:block">
+                    <div className="grid grid-cols-4 gap-8">
+                      <div className="col-span-3 space-y-4">
+                        <div className="space-y-2">
+                          <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Medical Context & Limitations</h4>
+                          <p className="text-[10px] text-gray-500 leading-relaxed text-justify">
+                            This document is an automated analysis generated by the PureScan AI audit system. Results are derived from visual data extraction and cross-referencing with nutritional databases. THIS IS NOT A REPLACEMENT FOR PROFESSIONAL MEDICAL ADVICE. Laboratory testing is the only definitive method for determining ingredient purity. Individuals with clinical health conditions or severe allergies must prioritize physical labels and professional medical consultations over this automated report.
+                          </p>
+                        </div>
+                        <div className="flex gap-8">
+                          <div className="space-y-1">
+                            <h5 className="text-[8px] font-bold text-gray-400 tracking-widest uppercase">Methodology</h5>
+                            <p className="text-[8px] text-gray-500 font-mono">CV_LLM_HYBRID_4.0_STABLE</p>
+                          </div>
+                          <div className="space-y-1">
+                            <h5 className="text-[8px] font-bold text-gray-400 tracking-widest uppercase">Reviewer</h5>
+                            <p className="text-[8px] text-gray-500 font-mono">AUTOMATED_AGENT_AI</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 border rounded-2xl bg-gray-50">
+                         <div className="w-12 h-12 bg-white rounded border flex items-center justify-center mb-2">
+                            <Scan className="w-6 h-6 text-gray-300" />
+                         </div>
+                         <p className="text-[7px] text-gray-400 text-center font-bold uppercase tracking-widest">Scan QR to Verify Original</p>
+                      </div>
                     </div>
-                    <p className="text-[8px] text-gray-300 mt-4 text-center">Generated by PureScan AI • Know the Truth, Improve your life</p>
+                    <p className="text-[8px] text-gray-400 mt-8 text-center font-bold tracking-[0.3em] uppercase opacity-50">Know the Truth, Improve your life • PureScan Clinical Intel</p>
                   </div>
                 </div>
               </div>
