@@ -762,28 +762,45 @@ export default function App() {
     
     try {
       const element = document.getElementById('pdf-export-content');
-      if (!element) return;
+      if (!element) {
+        setError("Export target not found");
+        return;
+      }
 
-      // Temporary show elements that might be hidden or in scrollable container
+      // Add a temporary loading state for export
+      setError("Generating PDF... please wait");
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        // Ensure we capture everything even if scrolled
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          // You can modify the cloned document here if needed
+          const el = clonedDoc.getElementById('pdf-export-content');
+          if (el) {
+            el.style.maxHeight = 'none';
+            el.style.overflow = 'visible';
+          }
+        }
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'px',
         format: [canvas.width, canvas.height]
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`PureScan_${scanResult.productName.replace(/\s+/g, '_')}_Report.pdf`);
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`PureScan_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`);
+      setError(null); // Clear the loading state
     } catch (err) {
-      console.error("PDF Export failed:", err);
-      setError("Failed to generate PDF. Please try again.");
+      console.error("PDF Export error:", err);
+      setError("PDF Generation failed. Try again with a clearer view.");
     }
   };
 
