@@ -40,7 +40,6 @@ body {
   margin: 0 auto !important;
   background: white !important;
   padding: 80px 80px !important;
-  min-height: 1448px !important; /* Proper ratio for 1024px width A4 */
   display: flex !important;
   flex-direction: column !important;
   box-shadow: none !important;

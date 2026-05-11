@@ -835,10 +835,10 @@ export default function App() {
       pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      // Add subsequent pages only if significantly more content remains (> 5mm)
-      while (heightLeft > 5) {
+      // Add subsequent pages only if significantly more content remains (> 10mm)
+      while (heightLeft > 10) {
         pdf.addPage();
-        position = heightLeft - imgHeight;
+        position -= pageHeight;
         pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
@@ -1253,10 +1253,8 @@ export default function App() {
                         <h3 className="font-bold text-gray-900 dark:text-white">Dark Mode</h3>
                       </div>
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsDarkMode(!isDarkMode);
-                        }}
+                        type="button"
+                        onClick={() => setIsDarkMode(prev => !prev)}
                         className={`w-12 h-6 rounded-full transition-all duration-300 relative ${isDarkMode ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${isDarkMode ? 'left-7' : 'left-1'}`} />
