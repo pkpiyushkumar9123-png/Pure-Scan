@@ -763,95 +763,87 @@ export default function App() {
     try {
       const element = document.getElementById('pdf-export-content');
       if (!element) {
-        setError("Export target not found");
+        setError("Export system error: Content element missing.");
         return;
       }
 
-      setError("Generating PDF report...");
+      setError("Processing PDF... Please stay on this tab.");
 
-      // Use a more robust html2canvas configuration
+      // Ensure all images in the element have crossOrigin set
+      const images = element.getElementsByTagName('img');
+      for (let i = 0; i < images.length; i++) {
+        if (!images[i].src.startsWith('data:')) {
+          images[i].crossOrigin = 'anonymous';
+        }
+      }
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false, // Changed to false for better security/compatibility with toDataURL
         logging: false,
         backgroundColor: '#ffffff',
+        imageTimeout: 20000,
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('pdf-export-content');
           if (el) {
-            // Remove height limits and scrolling to capture full content
             el.style.maxHeight = 'none';
             el.style.height = 'auto';
             el.style.overflow = 'visible';
-            el.style.padding = '40px'; // Add some margin for the PDF
-
-            // Force show all hidden ingredient details for the export
-            const hiddenElements = el.querySelectorAll('.hidden');
-            hiddenElements.forEach((el) => {
-              if (el instanceof HTMLElement) {
-                el.classList.remove('hidden');
-                el.style.display = 'block';
+            el.style.padding = '20px';
+            
+            // Force show all details for PDF
+            const details = el.querySelectorAll('.hidden');
+            details.forEach((d) => {
+              if (d instanceof HTMLElement) {
+                d.classList.remove('hidden');
+                d.style.display = 'block';
               }
             });
 
-            // Handle print-only classes
-            const printOnly = el.querySelectorAll('.print\\:block');
-            printOnly.forEach((el) => {
-              if (el instanceof HTMLElement) {
-                el.style.display = 'block';
-              }
+            // Remove SVG filters which often break html2canvas
+            el.querySelectorAll('svg').forEach(svg => {
+              svg.style.filter = 'none';
+              svg.querySelectorAll('*').forEach(child => {
+                if (child instanceof HTMLElement || child instanceof SVGElement) {
+                   (child as any).style.filter = 'none';
+                }
+              });
             });
 
-            const printHidden = el.querySelectorAll('.print\\:hidden');
-            printHidden.forEach((el) => {
-              if (el instanceof HTMLElement) {
-                el.style.display = 'none';
-              }
-            });
+            // Adjust printing visibility
+            el.querySelectorAll('.print\\:hidden').forEach(node => (node as HTMLElement).style.display = 'none');
+            el.querySelectorAll('.print\\:block').forEach(node => (node as HTMLElement).style.display = 'block');
           }
         }
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      
-      // Calculate dimensions to fit A4
+      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      // Scaling factor to fit width
-      const ratio = pageWidth / canvasWidth;
-      const finalWidth = canvasWidth * ratio;
-      const finalHeight = canvasHeight * ratio;
-
-      // If content is very long, it will be scaled down or we'd need multi-page.
-      // For now, we'll scale it to fit the width and handle single page.
-      // If it exceeds one page, we could add logic for multiple pages.
-      
-      let heightLeft = finalHeight;
+      let heightLeft = pdfHeight;
       let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
 
-      // First page
-      pdf.addImage(imgData, 'JPEG', 0, position, finalWidth, finalHeight);
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
 
-      // Add subsequent pages if needed
       while (heightLeft >= 0) {
-        position = heightLeft - finalHeight;
+        position = heightLeft - pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, finalWidth, finalHeight);
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
         heightLeft -= pageHeight;
       }
 
-      const fileName = `PureScan_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`;
-      pdf.save(fileName);
+      pdf.save(`PureScan_Report_${Date.now()}.pdf`);
       setError(null);
     } catch (err) {
-      console.error("PDF Export error:", err);
-      setError("Failed to create PDF. Please ensure all data is loaded.");
+      console.error("PDF Engine Error:", err);
+      setError("PDF Export Error: System busy or memory low. Please try again.");
     }
   };
 
