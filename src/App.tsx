@@ -767,40 +767,91 @@ export default function App() {
         return;
       }
 
-      // Add a temporary loading state for export
-      setError("Generating PDF... please wait");
+      setError("Generating PDF report...");
 
+      // Use a more robust html2canvas configuration
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        // Ensure we capture everything even if scrolled
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
         onclone: (clonedDoc) => {
-          // You can modify the cloned document here if needed
           const el = clonedDoc.getElementById('pdf-export-content');
           if (el) {
+            // Remove height limits and scrolling to capture full content
             el.style.maxHeight = 'none';
+            el.style.height = 'auto';
             el.style.overflow = 'visible';
+            el.style.padding = '40px'; // Add some margin for the PDF
+
+            // Force show all hidden ingredient details for the export
+            const hiddenElements = el.querySelectorAll('.hidden');
+            hiddenElements.forEach((el) => {
+              if (el instanceof HTMLElement) {
+                el.classList.remove('hidden');
+                el.style.display = 'block';
+              }
+            });
+
+            // Handle print-only classes
+            const printOnly = el.querySelectorAll('.print\\:block');
+            printOnly.forEach((el) => {
+              if (el instanceof HTMLElement) {
+                el.style.display = 'block';
+              }
+            });
+
+            const printHidden = el.querySelectorAll('.print\\:hidden');
+            printHidden.forEach((el) => {
+              if (el instanceof HTMLElement) {
+                el.style.display = 'none';
+              }
+            });
           }
         }
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      
+      // Calculate dimensions to fit A4
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      // Scaling factor to fit width
+      const ratio = pageWidth / canvasWidth;
+      const finalWidth = canvasWidth * ratio;
+      const finalHeight = canvasHeight * ratio;
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`PureScan_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`);
-      setError(null); // Clear the loading state
+      // If content is very long, it will be scaled down or we'd need multi-page.
+      // For now, we'll scale it to fit the width and handle single page.
+      // If it exceeds one page, we could add logic for multiple pages.
+      
+      let heightLeft = finalHeight;
+      let position = 0;
+
+      // First page
+      pdf.addImage(imgData, 'JPEG', 0, position, finalWidth, finalHeight);
+      heightLeft -= pageHeight;
+
+      // Add subsequent pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - finalHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, finalWidth, finalHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `PureScan_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`;
+      pdf.save(fileName);
+      setError(null);
     } catch (err) {
       console.error("PDF Export error:", err);
-      setError("PDF Generation failed. Try again with a clearer view.");
+      setError("Failed to create PDF. Please ensure all data is loaded.");
     }
   };
 
