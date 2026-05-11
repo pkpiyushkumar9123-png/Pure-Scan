@@ -24,7 +24,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 import Cropper from 'react-easy-crop';
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
@@ -767,61 +767,29 @@ export default function App() {
         return;
       }
 
-      setError("Processing PDF... Please stay on this tab.");
+      setError("Preparing your report... Please wait.");
 
-      // Ensure all images in the element have crossOrigin set
-      const images = element.getElementsByTagName('img');
-      for (let i = 0; i < images.length; i++) {
-        if (!images[i].src.startsWith('data:')) {
-          images[i].crossOrigin = 'anonymous';
-        }
-      }
+      // Add a class to force visibility of all elements in the PDF
+      element.classList.add('export-mode');
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false, // Changed to false for better security/compatibility with toDataURL
-        logging: false,
+      // html-to-image is generally more reliable than html2canvas
+      const dataUrl = await htmlToImage.toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
         backgroundColor: '#ffffff',
-        imageTimeout: 20000,
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById('pdf-export-content');
-          if (el) {
-            el.style.maxHeight = 'none';
-            el.style.height = 'auto';
-            el.style.overflow = 'visible';
-            el.style.padding = '20px';
-            
-            // Force show all details for PDF
-            const details = el.querySelectorAll('.hidden');
-            details.forEach((d) => {
-              if (d instanceof HTMLElement) {
-                d.classList.remove('hidden');
-                d.style.display = 'block';
-              }
-            });
-
-            // Remove SVG filters which often break html2canvas
-            el.querySelectorAll('svg').forEach(svg => {
-              svg.style.filter = 'none';
-              svg.querySelectorAll('*').forEach(child => {
-                if (child instanceof HTMLElement || child instanceof SVGElement) {
-                   (child as any).style.filter = 'none';
-                }
-              });
-            });
-
-            // Adjust printing visibility
-            el.querySelectorAll('.print\\:hidden').forEach(node => (node as HTMLElement).style.display = 'none');
-            el.querySelectorAll('.print\\:block').forEach(node => (node as HTMLElement).style.display = 'block');
-          }
-        }
+        style: {
+          maxHeight: 'none',
+          height: 'auto',
+          overflow: 'visible',
+          borderRadius: '0'
+        },
       });
-      
-      const imgData = canvas.toDataURL('image/png');
+
+      // Remove the class after capturing
+      element.classList.remove('export-mode');
+
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgProps = pdf.getImageProperties(imgData);
+      const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
@@ -829,21 +797,42 @@ export default function App() {
       let position = 0;
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
       while (heightLeft >= 0) {
         position = heightLeft - pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
 
       pdf.save(`PureScan_Report_${Date.now()}.pdf`);
       setError(null);
     } catch (err) {
-      console.error("PDF Engine Error:", err);
-      setError("PDF Export Error: System busy or memory low. Please try again.");
+      console.error("PDF Export Error:", err);
+      // Try one more time with lower scale if it's a memory issue
+      try {
+        const element = document.getElementById('pdf-export-content');
+        if (element) {
+          element.classList.add('export-mode');
+          const dataUrl = await htmlToImage.toPng(element, { pixelRatio: 1 });
+          element.classList.remove('export-mode');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`PureScan_Report_L_${Date.now()}.pdf`);
+          setError(null);
+          return;
+        }
+      } catch (innerErr) {
+        console.error("Second attempt failed:", innerErr);
+        const el = document.getElementById('pdf-export-content');
+        if (el) el.classList.remove('export-mode');
+      }
+      setError("PDF Export failed. Try making the window larger or refreshing.");
     }
   };
 

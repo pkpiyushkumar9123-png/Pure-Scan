@@ -15,3 +15,22 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* PDF Export Styles */
+.export-mode .hidden {
+  display: block !important;
+}
+
+.export-mode .print\:hidden {
+  display: none !important;
+}
+
+.export-mode .print\:block {
+  display: block !important;
+}
+
+.export-mode {
+  padding: 40px !important;
+  max-height: none !important;
+  height: auto !important;
+}
