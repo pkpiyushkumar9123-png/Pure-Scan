@@ -22,7 +22,9 @@ import {
   Download,
   Zap,
   ShieldCheck,
-  Globe
+  Globe,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -123,7 +125,8 @@ const CircularProgress = ({ score, grade }: { score: number; grade: string }) =>
           cx="50"
           cy="50"
           r={radius}
-          stroke="#F3F4F6"
+          stroke="currentColor"
+          className="text-gray-100 dark:text-slate-800"
           strokeWidth="8"
           fill="transparent"
         />
@@ -188,6 +191,11 @@ export default function App() {
     const saved = localStorage.getItem('purescan_dietary_preferences');
     return saved ? JSON.parse(saved) : ['Wheat', 'Barley', 'Rye'];
   });
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('purescan_dark_mode');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const [showLegalView, setShowLegalView] = useState<'none' | 'disclaimer' | 'privacy' | 'terms'>('none');
   const [showDietaryView, setShowDietaryView] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
@@ -198,6 +206,15 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('purescan_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (['detecting', 'extracting', 'analyzing'].includes(status)) {
@@ -855,14 +872,14 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-off-white overflow-hidden relative">
+    <div className={`flex flex-col h-screen max-w-md mx-auto bg-off-white dark:bg-dark-bg overflow-hidden relative transition-colors duration-300`}>
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="px-6 py-4 flex items-center justify-between bg-white/80 dark:bg-dark-card/80 backdrop-blur-md sticky top-0 z-10 border-b border-gray-100 dark:border-dark-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
             <img src="/icon.png" alt="PureScan Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900">PureScan AI</h1>
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">PureScan AI</h1>
         </div>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <Info className="w-5 h-5 text-gray-500" />
@@ -872,7 +889,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto pb-24">
         {activeTab === 'scan' && (
-          <div className="p-6 space-y-8">
+          <div className="p-6 space-y-8 dark:bg-dark-bg">
             {/* Camera Viewfinder & Workflow Screens */}
             <div className="relative aspect-[3/4] bg-black rounded-3xl overflow-hidden shadow-2xl group">
               {/* Hidden File Input */}
@@ -1141,9 +1158,9 @@ export default function App() {
         )}
 
         {activeTab === 'history' && (
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 dark:bg-dark-bg min-h-full">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Scan History</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Scan History</h2>
               {history.length > 0 && (
                 <button 
                   onClick={() => {
@@ -1160,41 +1177,41 @@ export default function App() {
 
             {history.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
-                  <History className="w-10 h-10 text-gray-400" />
+                <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                  <History className="w-10 h-10 text-gray-400 dark:text-gray-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">No History Yet</h2>
-                <p className="text-gray-500 max-w-[240px]">Your scanned products will appear here for quick reference.</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">No History Yet</h2>
+                <p className="text-gray-500 dark:text-gray-400 max-w-[240px]">Your scanned products will appear here for quick reference.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {history.map((item) => (
-                  <motion.button
-                    key={item.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => {
-                      setScanResult(item);
-                      setStatus('result');
-                    }}
-                    className="w-full flex items-center gap-4 p-4 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left"
-                  >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-xl shrink-0 ${
-                      item.grade === 'A' ? 'bg-emerald-500' :
-                      item.grade === 'B' ? 'bg-lime-500' :
-                      item.grade === 'C' ? 'bg-amber-500' :
-                      item.grade === 'D' ? 'bg-orange-500' : 'bg-red-500'
-                    }`}>
-                      {item.grade}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 truncate">{item.productName}</h3>
-                      <p className="text-xs text-gray-500">
-                        {new Date(item.timestamp).toLocaleDateString()} • {item.riskyIngredients.length} Risks
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-300" />
-                  </motion.button>
+                    <motion.button
+                      key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => {
+                        setScanResult(item);
+                        setStatus('result');
+                      }}
+                      className="w-full flex items-center gap-4 p-4 bg-white dark:bg-dark-card rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm hover:shadow-md transition-all text-left"
+                    >
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-xl shrink-0 ${
+                        item.grade === 'A' ? 'bg-emerald-500' :
+                        item.grade === 'B' ? 'bg-lime-500' :
+                        item.grade === 'C' ? 'bg-amber-500' :
+                        item.grade === 'D' ? 'bg-orange-500' : 'bg-red-500'
+                      }`}>
+                        {item.grade}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 dark:text-white truncate">{item.productName}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(item.timestamp).toLocaleDateString()} • {item.riskyIngredients.length} Risks
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600" />
+                    </motion.button>
                 ))}
               </div>
             )}
@@ -1202,10 +1219,10 @@ export default function App() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 dark:bg-dark-bg min-h-full">
             {!showProfile ? (
               <>
-                <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     {['Profile', 'Dietary Preferences', 'Medical Disclaimer', 'Privacy Policy', 'Terms of Service', 'Support us'].map((item) => (
@@ -1219,22 +1236,37 @@ export default function App() {
                         if (item === 'Terms of Service') setShowLegalView('terms');
                         if (item === 'Support us') setShowSupportPopup(true);
                       }}
-                      className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-4 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
-                      <span className="font-medium text-gray-700">{item}</span>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{item}</span>
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-600" />
                     </button>
                   ))}
                   </div>
 
-                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-                    <div className="flex items-center gap-3">
+                  <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gray-900/10 dark:bg-slate-800 rounded-xl">
+                          <Moon className="w-5 h-5 text-gray-900 dark:text-slate-300" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Dark Mode</h3>
+                      </div>
+                      <button 
+                        onClick={() => setIsDarkMode(!isDarkMode)}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${isDarkMode ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3 border-t border-gray-100 dark:border-dark-border pt-4">
                       <div className="p-2 bg-healthy-green/10 rounded-xl">
                         <Settings className="w-5 h-5 text-healthy-green" />
                       </div>
-                      <h3 className="font-bold text-gray-900">Gemini API Key</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-white">Gemini API Key</h3>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       By default, PureScan uses an inbuilt free API key. You can provide your own key below to avoid rate limits.
                     </p>
                     <div className="space-y-2">
@@ -1243,7 +1275,7 @@ export default function App() {
                         placeholder="Enter your Gemini API Key"
                         value={customApiKey}
                         onChange={(e) => handleSaveApiKey(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-dark-border rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all dark:text-white"
                       />
                       {customApiKey && (
                         <button 
@@ -1256,13 +1288,13 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-healthy-green/10 rounded-xl">
                           <CheckCircle2 className="w-5 h-5 text-healthy-green" />
                         </div>
-                        <h3 className="font-bold text-gray-900">Anonymous Analytics</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Anonymous Analytics</h3>
                       </div>
                       <button 
                         onClick={() => {
@@ -1270,7 +1302,7 @@ export default function App() {
                           setAnonymousAnalytics(newValue);
                           localStorage.setItem('purescan_anonymous_analytics', String(newValue));
                         }}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${anonymousAnalytics ? 'bg-healthy-green' : 'bg-gray-200'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${anonymousAnalytics ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${anonymousAnalytics ? 'left-7' : 'left-1'}`} />
                       </button>
@@ -1282,8 +1314,8 @@ export default function App() {
                           <RefreshCw className="w-5 h-5 text-blue-500" />
                         </div>
                         <div className="space-y-0.5">
-                          <h3 className="font-bold text-gray-900">Auto Scan</h3>
-                          <p className="text-[10px] text-gray-500">Bypass review steps for instant data (15s goal)</p>
+                          <h3 className="font-bold text-gray-900 dark:text-white">Auto Scan</h3>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400">Bypass review steps for instant data (15s goal)</p>
                         </div>
                       </div>
                       <button 
@@ -1292,15 +1324,15 @@ export default function App() {
                           setAutoScan(newValue);
                           localStorage.setItem('purescan_auto_scan', String(newValue));
                         }}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${autoScan ? 'bg-healthy-green' : 'bg-gray-200'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${autoScan ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${autoScan ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       Help us improve the AI by sharing anonymized ingredient data (No photos are ever shared).
                     </p>
-                    <div className="pt-4 border-t border-gray-100">
+                    <div className="pt-4 border-t border-gray-100 dark:border-dark-border">
                       <button 
                         onClick={async () => {
                           if (confirm("Are you sure you want to wipe your entire scan history? This action cannot be undone.")) {
@@ -1314,7 +1346,7 @@ export default function App() {
                             setTimeout(() => setError(null), 3000);
                           }
                         }}
-                        className="w-full py-3 bg-red-50 text-critical-red rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors text-xs"
+                        className="w-full py-3 bg-red-50 dark:bg-red-900/10 text-critical-red rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-xs"
                       >
                         <RefreshCw className="w-4 h-4" />
                         WIPE ALL DATA
@@ -1333,11 +1365,11 @@ export default function App() {
                         setShowProfile(false);
                         setIsEditingProfile(false);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                     >
-                      <ChevronDown className="w-6 h-6 rotate-90" />
+                      <ChevronDown className="w-6 h-6 rotate-90 dark:text-white" />
                     </button>
-                    <h2 className="text-2xl font-bold text-gray-900">Identity Hub</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Identity Hub</h2>
                   </div>
                   {!isEditingProfile && (
                     <button 
@@ -1359,7 +1391,7 @@ export default function App() {
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           placeholder="Your full name"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-dark-border dark:text-white rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1369,14 +1401,14 @@ export default function App() {
                           value={editAvatarUrl}
                           onChange={(e) => setEditAvatarUrl(e.target.value)}
                           placeholder="https://example.com/avatar.jpg"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-dark-border dark:text-white rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-healthy-green/20 transition-all"
                         />
                       </div>
                     </div>
                     <div className="flex gap-4">
                       <button 
                         onClick={() => setIsEditingProfile(false)}
-                        className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold transition-colors"
+                        className="flex-1 py-4 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold transition-colors"
                       >
                         CANCEL
                       </button>
@@ -1393,7 +1425,7 @@ export default function App() {
                     {/* Avatar Section */}
                     <div className="flex flex-col items-center space-y-4">
                       <div className="relative">
-                        <div className="w-32 h-32 rounded-full bg-healthy-green/10 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
+                        <div className="w-32 h-32 rounded-full bg-healthy-green/10 border-4 border-white dark:border-dark-card shadow-xl flex items-center justify-center overflow-hidden">
                           <img 
                             src={user?.user_metadata?.avatar_url || "https://picsum.photos/seed/user/200/200"} 
                             alt="User Avatar" 
@@ -1401,27 +1433,27 @@ export default function App() {
                             referrerPolicy="no-referrer"
                           />
                         </div>
-                        <div className="absolute bottom-0 right-0 w-8 h-8 bg-healthy-green rounded-full border-4 border-white flex items-center justify-center shadow-lg">
+                        <div className="absolute bottom-0 right-0 w-8 h-8 bg-healthy-green rounded-full border-4 border-white dark:border-dark-card flex items-center justify-center shadow-lg">
                           <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                         </div>
                       </div>
                       <div className="text-center">
-                        <h3 className="text-xl font-bold text-gray-900">{user?.user_metadata?.full_name || user?.email || "[User Name]"}</h3>
-                        <p className="text-sm text-gray-500 font-medium">{user?.email || "pk.piyushkumar.9123@gmail.com"}</p>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.user_metadata?.full_name || user?.email || "[User Name]"}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email || "pk.piyushkumar.9123@gmail.com"}</p>
                       </div>
                     </div>
 
                     {/* Data Points */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
+                      <div className="bg-white dark:bg-dark-card p-4 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-1">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
-                        <p className="font-bold text-gray-900">
+                        <p className="font-bold text-gray-900 dark:text-white">
                           {user ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "March 2026"}
                         </p>
                       </div>
-                      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-1">
+                      <div className="bg-white dark:bg-dark-card p-4 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-1">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Scans</p>
-                        <p className="font-bold text-gray-900">{history.length}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{history.length}</p>
                       </div>
                     </div>
                   </div>
@@ -1436,7 +1468,7 @@ export default function App() {
                     {/* Google */}
                     <button 
                       onClick={() => handleSocialLogin('google')}
-                      className="w-14 h-14 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-all active:scale-95"
+                      className="w-14 h-14 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 transition-all active:scale-95"
                     >
                       <svg className="w-6 h-6" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -1448,7 +1480,7 @@ export default function App() {
                     {/* Facebook */}
                     <button 
                       onClick={() => handleSocialLogin('facebook')}
-                      className="w-14 h-14 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-all active:scale-95"
+                      className="w-14 h-14 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 transition-all active:scale-95"
                     >
                       <svg className="w-6 h-6" viewBox="0 0 24 24">
                         <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -1457,10 +1489,10 @@ export default function App() {
                     {/* Apple */}
                     <button 
                       onClick={() => handleSocialLogin('apple')}
-                      className="w-14 h-14 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-all active:scale-95"
+                      className="w-14 h-14 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 transition-all active:scale-95"
                     >
                       <svg className="w-6 h-6" viewBox="0 0 24 24">
-                        <path fill="#000000" d="M17.057 10.78c-.045-2.184 1.782-3.232 1.864-3.282-1.014-1.482-2.587-1.684-3.143-1.708-1.334-.136-2.603.786-3.278.786-.676 0-1.72-.767-2.83-.745-1.458.022-2.803.85-3.553 2.153-1.514 2.628-.387 6.52 1.083 8.643.72 1.04 1.575 2.208 2.701 2.166 1.084-.042 1.492-.7 2.803-.7s1.676.7 2.825.678c1.17-.022 1.917-1.05 2.63-2.093.824-1.206 1.165-2.373 1.184-2.433-.025-.011-2.28-.874-2.306-3.468zM14.53 3.988c.6-.727 1.005-1.738.894-2.748-.868.035-1.92.578-2.542 1.305-.558.646-1.045 1.678-.915 2.667.968.075 1.963-.497 2.563-1.224z"/>
+                        <path fill="#000000" className="dark:fill-white" d="M17.057 10.78c-.045-2.184 1.782-3.232 1.864-3.282-1.014-1.482-2.587-1.684-3.143-1.708-1.334-.136-2.603.786-3.278.786-.676 0-1.72-.767-2.83-.745-1.458.022-2.803.85-3.553 2.153-1.514 2.628-.387 6.52 1.083 8.643.72 1.04 1.575 2.208 2.701 2.166 1.084-.042 1.492-.7 2.803-.7s1.676.7 2.825.678c1.17-.022 1.917-1.05 2.63-2.093.824-1.206 1.165-2.373 1.184-2.433-.025-.011-2.28-.874-2.306-3.468zM14.53 3.988c.6-.727 1.005-1.738.894-2.748-.868.035-1.92.578-2.542 1.305-.558.646-1.045 1.678-.915 2.667.968.075 1.963-.497 2.563-1.224z"/>
                       </svg>
                     </button>
                   </div>
@@ -1469,7 +1501,7 @@ export default function App() {
                 {/* Logout Button */}
                 <button 
                   onClick={handleLogout}
-                  className="w-full py-4 bg-red-50 text-critical-red rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                  className="w-full py-4 bg-red-50 dark:bg-red-900/10 text-critical-red rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <X className="w-5 h-5" />
                   LOG OUT
@@ -1499,30 +1531,30 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-30 shadow-2xl max-h-[90%] overflow-y-auto"
+              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-[40px] z-30 shadow-2xl max-h-[90%] overflow-y-auto"
             >
               {/* PDF Content Wrapper */}
-              <div id="pdf-export-content" className="bg-white">
+              <div id="pdf-export-content" className="bg-white dark:bg-dark-card">
                 {/* Handle */}
-                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 print:hidden" />
+                <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-4 mb-2 print:hidden" />
                 
                 <div 
                   id="pdf-export-content"
                   className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode-active' : ''}`}
                 >
                   {/* Professional Report Header (Only for PDF) */}
-                  <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6">
+                  <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6 dark:border-white">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-                          <Scan className="w-5 h-5 text-white" />
+                        <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center">
+                          <Scan className="w-5 h-5 text-white dark:text-gray-900" />
                         </div>
-                        <h1 className="text-xl font-black tracking-tighter uppercase">PureScan Clinical</h1>
+                        <h1 className="text-xl font-black tracking-tighter uppercase dark:text-white">PureScan Clinical</h1>
                       </div>
                       <p className="text-[10px] text-gray-500 font-mono">DOCUMENT REF: PS-{scanResult?.id.slice(0,8).toUpperCase() || "RA-0000"}</p>
                     </div>
                     <div className="text-right space-y-1">
-                      <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900">Health Audit Report</h2>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">Health Audit Report</h2>
                       <p className="text-[10px] text-gray-500 font-medium">Issue Date: {new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                       <p className="text-[10px] text-gray-400 font-mono uppercase">System: AIS-GEMINI-CORE-3.0</p>
                     </div>
@@ -1531,22 +1563,22 @@ export default function App() {
                   {/* Standard Header (App View) */}
                   <div className="flex items-start justify-between print:mt-4">
                     <div>
-                      <h2 className="text-3xl font-black text-gray-900 leading-tight">{scanResult?.productName || "Unknown Product"}</h2>
+                      <h2 className="text-3xl font-black text-gray-900 dark:text-white leading-tight">{scanResult?.productName || "Unknown Product"}</h2>
                       <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-1">Biochemical Analysis Result</p>
                     </div>
                     <button 
                       onClick={closeResult}
-                      className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors print:hidden"
+                      className="p-2 bg-gray-100 dark:bg-slate-800 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors print:hidden"
                     >
-                      <X className="w-5 h-5 text-gray-600" />
+                      <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                     </button>
                   </div>
 
                   {/* Clinical Summary Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 p-10 rounded-[32px] border border-gray-100 relative overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 dark:bg-slate-900/50 p-10 rounded-[32px] border border-gray-100 dark:border-dark-border relative overflow-hidden">
                     {/* Watermark for PDF */}
                     <div className="absolute -right-8 -top-8 opacity-[0.04] pointer-events-none hidden print:block">
-                      <Scan className="w-72 h-72 text-gray-900 rotate-12" />
+                      <Scan className="w-72 h-72 text-gray-900 dark:text-white rotate-12" />
                     </div>
 
                     <div className="flex justify-center z-10">
@@ -1556,8 +1588,8 @@ export default function App() {
                     <div className="md:col-span-2 space-y-6 z-10">
                       <div className="space-y-2">
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">Impact Diagnostic</h3>
-                        <div className="h-1 w-16 bg-gray-900" />
-                        <p className="text-xl font-black text-gray-900 leading-tight">
+                        <div className="h-1 w-16 bg-gray-900 dark:bg-white" />
+                        <p className="text-xl font-black text-gray-900 dark:text-white leading-tight">
                           {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
                             ? "OPTIMAL NUTRITIONAL RATIO. BIO-COMPATIBLE PROFILE."
                             : "CRITICAL ADDITIVES DETECTED. HIGH BIO-RISK SCORE IDENTIFIED."}
@@ -1565,7 +1597,7 @@ export default function App() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 md:gap-6">
-                        <div className="p-4 md:px-6 md:py-8 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
+                        <div className="p-4 md:px-6 md:py-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
                           <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Health Grade</p>
                           <div className="w-full flex items-center justify-center">
                             <p className={`text-sm sm:text-lg md:text-2xl lg:text-3xl font-black truncate leading-none ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
@@ -1573,10 +1605,10 @@ export default function App() {
                             </p>
                           </div>
                         </div>
-                        <div className="p-4 md:px-6 md:py-8 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
+                        <div className="p-4 md:px-6 md:py-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
                           <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Audit Status</p>
                           <div className="w-full flex items-center justify-center">
-                            <p className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-black text-gray-900 truncate leading-none uppercase">VERIFIED</p>
+                            <p className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white truncate leading-none uppercase">VERIFIED</p>
                           </div>
                         </div>
                       </div>
@@ -1593,14 +1625,14 @@ export default function App() {
 
                   {/* Risky Ingredients Analysis */}
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b-2 border-gray-900 pb-4">
-                      <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                    <div className="flex items-center justify-between border-b-2 border-gray-900 dark:border-white pb-4">
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                         <AlertCircle className={`w-6 h-6 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
                         Biochemical Audit
                       </h3>
                       <div className="text-right">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Audit Count</span>
-                        <span className="text-sm font-black text-gray-900">
+                        <span className="text-sm font-black text-gray-900 dark:text-white">
                           {scanResult?.riskyIngredients.length || 0} ITEMS DETECTED
                         </span>
                       </div>
@@ -1610,8 +1642,8 @@ export default function App() {
                       {scanResult?.riskyIngredients.map((ing, idx) => (
                         <div 
                           key={idx} 
-                          className={`flex flex-col p-6 border-b border-gray-100 transition-all duration-300 ${
-                            ing.risk === 'high' ? 'bg-red-50/20' : 'bg-transparent'
+                          className={`flex flex-col p-6 border-b border-gray-100 dark:border-dark-border transition-all duration-300 ${
+                            ing.risk === 'high' ? 'bg-red-50/20 dark:bg-red-900/10' : 'bg-transparent'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-6">
@@ -1620,31 +1652,31 @@ export default function App() {
                                 <div className={`w-3 h-3 rounded-none rotate-45 ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
                               </div>
                               <div className="space-y-1">
-                                <h4 className={`text-lg font-black leading-tight uppercase tracking-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900'}`}>{ing.name}</h4>
+                                <h4 className={`text-lg font-black leading-tight uppercase tracking-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900 dark:text-white'}`}>{ing.name}</h4>
                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wide">{ing.risk} risk factor identified</p>
-                                <p className="text-sm text-gray-600 leading-relaxed font-medium mt-2">{ing.description}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium mt-2">{ing.description}</p>
                               </div>
                             </div>
                             <button 
                               onClick={() => toggleExpand(idx)}
-                              className={`p-2 rounded-none transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 text-white' : 'bg-white text-gray-300 border border-gray-200 hover:text-gray-900'}`}
+                              className={`p-2 rounded-none transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 dark:bg-white dark:text-gray-900 text-white' : 'bg-white dark:bg-slate-800 text-gray-300 dark:text-gray-500 border border-gray-200 dark:border-dark-border hover:text-gray-900 dark:hover:text-white'}`}
                             >
                               <Info className="w-5 h-5" />
                             </button>
                           </div>
                           
                           <div className={`overflow-hidden transition-all ${expandedIdx === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 print:max-h-none print:opacity-100'}`}>
-                            <div className="pt-6 mt-4 border-t border-dashed border-gray-200 space-y-4">
+                            <div className="pt-6 mt-4 border-t border-dashed border-gray-200 dark:border-dark-border space-y-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-1">
                                   <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Clinical Impact</h5>
-                                  <p className="text-[13px] text-gray-800 leading-relaxed font-semibold italic border-l-2 border-gray-200 pl-4">
+                                  <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed font-semibold italic border-l-2 border-gray-200 dark:border-dark-border pl-4">
                                     "{ing.implications}"
                                   </p>
                                 </div>
                                 <div className="space-y-1 hidden print:block">
                                   <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Precautionary Action</h5>
-                                  <p className="text-[13px] text-gray-600 leading-relaxed">
+                                  <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
                                     Neutralize metabolic load. Seek higher purity standards.
                                   </p>
                                 </div>
@@ -1655,9 +1687,9 @@ export default function App() {
                       ))}
 
                       {scanResult?.riskyIngredients.length === 0 && (
-                        <div className="p-12 text-center bg-gray-50 rounded-[32px] border border-dashed border-gray-200">
+                        <div className="p-12 text-center bg-gray-50 dark:bg-slate-900/50 rounded-[32px] border border-dashed border-gray-200 dark:border-dark-border">
                           <CheckCircle2 className="w-12 h-12 text-healthy-green mx-auto mb-4 opacity-40" />
-                          <p className="text-gray-500 font-bold">No High-Risk Additives Detected</p>
+                          <p className="text-gray-500 dark:text-gray-400 font-bold">No High-Risk Additives Detected</p>
                           <p className="text-xs text-gray-400 mt-1">Analysis complete within normal parameters.</p>
                         </div>
                       )}
@@ -1666,7 +1698,7 @@ export default function App() {
 
                   {/* Recommendation Section */}
                   {scanResult?.alternative && (
-                    <div className="bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
+                    <div className="bg-gray-900 dark:bg-slate-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
                       <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16 print:hidden" />
                       <div className="space-y-4 relative z-10">
                         <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2 print:text-gray-900">
@@ -1690,17 +1722,17 @@ export default function App() {
                       </div>
                     </div>
                   )}                  {/* PDF Mission & Disclaimer - Only visible in PDF/High detail view */}
-                  <div className="pt-10 border-t-2 border-gray-900 hidden print:block space-y-10">
+                  <div className="pt-10 border-t-2 border-gray-900 dark:border-white hidden print:block space-y-10">
                     {/* Vision Section */}
-                    <div className="bg-gray-50 border border-gray-200 p-8 rounded-2xl">
+                    <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-dark-border p-8 rounded-2xl">
                       <div className="flex gap-6 items-start">
-                        <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                        <div className="p-3 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-xl shadow-sm">
                           <Zap className="w-8 h-8 text-healthy-green" />
                         </div>
                         <div className="space-y-2">
-                          <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Our Vision & Mission</h4>
+                          <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest leading-none">Our Vision & Mission</h4>
                           <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-1">PureScan Intelligence Protocol</h5>
-                          <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
                             PureScan is built on the belief that transparency is a fundamental consumer right. We aim to bridge the gap between complex industrial labeling and consumer wellness by providing instant, biochemical transparency. Our vision is a world where health decisions are guided by data-driven clarity rather than corporate marketing ambiguity. We strive to empower a generation of conscious consumers through rigorous AI-driven metabolic audits.
                           </p>
                         </div>
@@ -1712,43 +1744,43 @@ export default function App() {
                       <div className="col-span-3 space-y-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-gray-900" />
-                            <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Clinical Reference Notice & Disclaimer</h4>
+                            <ShieldCheck className="w-4 h-4 text-gray-900 dark:text-white" />
+                            <h4 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest">Clinical Reference Notice & Disclaimer</h4>
                           </div>
-                          <p className="text-[10px] text-gray-500 leading-relaxed text-justify border-l-2 border-gray-200 pl-4 font-medium italic">
+                          <p className="text-[10px] text-gray-500 leading-relaxed text-justify border-l-2 border-gray-200 dark:border-dark-border pl-4 font-medium italic">
                             This document is an automated analysis generated by the PureScan AI audit system. Results are derived from visual data extraction and cross-referencing with global nutritional databases. THIS IS NOT A REPLACEMENT FOR PROFESSIONAL MEDICAL ADVICE. Laboratory testing is the only definitive method for determining ingredient purity. Individuals with clinical health conditions, severe allergies, or pediatric metabolic sensitivities must prioritize physical labels and professional medical consultations over this automated report. PureScan is a transparency tool, not a diagnostic platform.
                           </p>
                         </div>
                         <div className="flex gap-10">
                           <div className="space-y-1.5">
                             <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">System Methodology</h5>
-                            <p className="text-[8px] text-gray-800 font-mono font-bold px-2 py-1 bg-gray-100 rounded inline-block">INTEL_HYBRID_CORE_5.0</p>
+                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block">INTEL_HYBRID_CORE_5.0</p>
                           </div>
                           <div className="space-y-1.5">
                             <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">Audit Integrity</h5>
-                            <p className="text-[8px] text-gray-800 font-mono font-bold px-2 py-1 bg-gray-100 rounded inline-block">SECURED_AI_CERTIFIED</p>
+                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block">SECURED_AI_CERTIFIED</p>
                           </div>
                           <div className="space-y-1.5">
                             <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">Report Status</h5>
-                            <p className="text-[8px] text-gray-800 font-mono font-bold px-2 py-1 bg-gray-100 rounded inline-block uppercase">Verified Final</p>
+                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block uppercase">Verified Final</p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-3xl bg-white">
-                         <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mb-3 shadow-lg shadow-gray-900/10">
-                            <Scan className="w-8 h-8 text-white" />
+                      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 dark:border-dark-border rounded-3xl bg-white dark:bg-dark-card">
+                         <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-2xl flex items-center justify-center mb-3 shadow-lg shadow-gray-900/10 dark:shadow-white/10">
+                            <Scan className="w-8 h-8 text-white dark:text-gray-900" />
                          </div>
-                         <p className="text-[8px] text-gray-900 text-center font-black uppercase tracking-widest leading-tight">Verify Scan<br/>Originality</p>
+                         <p className="text-[8px] text-gray-900 dark:text-white text-center font-black uppercase tracking-widest leading-tight">Verify Scan<br/>Originality</p>
                       </div>
                     </div>
                     
                     <div className="pt-8 flex flex-col items-center gap-4">
-                      <div className="w-12 h-0.5 bg-gray-100" />
+                      <div className="w-12 h-0.5 bg-gray-100 dark:bg-slate-800" />
                       <p className="text-[9px] text-gray-400 text-center font-bold tracking-[0.4em] uppercase opacity-60">KNOW THE TRUTH • IMPROVE YOUR LIFE • PURESCAN INTEL</p>
                       <div className="flex gap-4">
-                        <div className="w-1 h-1 bg-gray-200 rounded-full" />
-                        <div className="w-1 h-1 bg-gray-200 rounded-full" />
-                        <div className="w-1 h-1 bg-gray-200 rounded-full" />
+                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
+                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
+                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
                       </div>
                     </div>
                   </div>
@@ -1766,14 +1798,14 @@ export default function App() {
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setStatus('editing')}
-                    className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+                    className="flex-1 py-4 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
                   >
                     <Edit3 className="w-4 h-4" />
                     EDIT
                   </button>
                   <button 
                     onClick={closeResult}
-                    className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-xl active:scale-[0.98] transition-transform"
+                    className="flex-1 py-4 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-2xl font-bold shadow-xl active:scale-[0.98] transition-transform"
                   >
                     GOT IT
                   </button>
@@ -1810,7 +1842,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-8 py-4 flex items-center justify-between z-10 max-w-md mx-auto">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-gray-100 dark:border-dark-border px-8 py-4 flex items-center justify-between z-40 max-w-md mx-auto">
         <NavButton 
           active={activeTab === 'scan'} 
           onClick={() => setActiveTab('scan')} 
@@ -1838,28 +1870,28 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-white flex flex-col p-8"
+            className="fixed inset-0 z-[100] bg-white dark:bg-dark-bg flex flex-col p-8"
           >
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
               <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-xl shadow-healthy-green/20 overflow-hidden">
                 <img src="/icon.png" alt="PureScan Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="space-y-4">
-                <h2 className="text-4xl font-black text-gray-900 tracking-tight">PureScan AI</h2>
+                <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">PureScan AI</h2>
                 <p className="text-healthy-green font-bold text-lg leading-tight px-4">
                   Scan the Label. Know the Truth. Make your life 1 step more Improved!
                 </p>
-                <p className="text-gray-500 text-sm leading-relaxed px-2">
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed px-2">
                   Stop guessing. Start auditing. Most food labels are designed to confuse you. "Natural flavors," "Heart healthy," and "No added sugar" are often masks for ultra-processed ingredients that compromise your long-term health. PureScan uses advanced Computer Vision and proprietary AI to cut through the marketing fluff and give you the raw truth in seconds.
                 </p>
               </div>
 
-              <div className="w-full bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4 text-left">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <div className="w-full bg-gray-50 dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border space-y-4 text-left">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-warning-amber" />
                   Medical Disclaimer
                 </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                   PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan. Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions.
                 </p>
               </div>
@@ -1892,22 +1924,22 @@ export default function App() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[110] bg-white flex flex-col"
+            className="fixed inset-0 z-[110] bg-white dark:bg-dark-bg flex flex-col"
           >
-            <header className="px-6 py-4 flex items-center gap-4 bg-white border-b border-gray-100">
+            <header className="px-6 py-4 flex items-center gap-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-dark-border">
               <button 
                 onClick={() => setShowDietaryView(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               >
-                <ChevronDown className="w-6 h-6 rotate-90" />
+                <ChevronDown className="w-6 h-6 rotate-90 dark:text-white" />
               </button>
-              <h2 className="text-xl font-bold text-gray-900">Dietary Preferences</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Dietary Preferences</h2>
             </header>
             
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Safety Guardrails</h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Select ingredients you want to strictly avoid. PureScan will flag these with a critical warning and override AI grades.
                 </p>
                 
@@ -1927,23 +1959,23 @@ export default function App() {
                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                           isActive 
                             ? 'bg-healthy-green/10 border-healthy-green text-healthy-green' 
-                            : 'bg-gray-50 border-gray-100 text-gray-600'
+                            : 'bg-gray-50 dark:bg-dark-card border-gray-100 dark:border-dark-border text-gray-600 dark:text-gray-300'
                         }`}
                       >
                         <span className="font-bold">{pref}</span>
-                        {isActive ? <CheckCircle2 className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-200" />}
+                        {isActive ? <CheckCircle2 className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-slate-700" />}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-2">
-                <div className="flex items-center gap-2 text-amber-800">
+              <div className="bg-amber-50 dark:bg-amber-900/10 p-6 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-2">
+                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
                   <AlertCircle className="w-5 h-5" />
                   <h4 className="font-bold">Important Note</h4>
                 </div>
-                <p className="text-xs text-amber-900/70 leading-relaxed">
+                <p className="text-xs text-amber-900/70 dark:text-amber-200/50 leading-relaxed">
                   These guardrails act as a hard-coded safety layer. However, always verify with the physical label as AI extraction may occasionally miss text.
                 </p>
               </div>
@@ -1960,16 +1992,16 @@ export default function App() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[110] bg-white flex flex-col"
+            className="fixed inset-0 z-[110] bg-white dark:bg-dark-bg flex flex-col"
           >
-            <header className="px-6 py-4 flex items-center gap-4 bg-white border-b border-gray-100">
+            <header className="px-6 py-4 flex items-center gap-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-dark-border">
               <button 
                 onClick={() => setShowLegalView('none')}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               >
-                <ChevronDown className="w-6 h-6 rotate-90" />
+                <ChevronDown className="w-6 h-6 rotate-90 dark:text-white" />
               </button>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {showLegalView === 'disclaimer' ? 'Medical Disclaimer' : 
                  showLegalView === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
               </h2>
@@ -1979,20 +2011,20 @@ export default function App() {
               {showLegalView === 'disclaimer' && (
                 <div className="prose prose-sm max-w-none space-y-6">
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">Non-Medical Advice</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Non-Medical Advice</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       PureScan provides nutritional information for educational purposes only. Our AI-generated health grades are not medical advice, a diagnosis, or a treatment plan.
                     </p>
                   </section>
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">Professional Consultation</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Professional Consultation</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       Always consult a healthcare professional before making dietary changes, especially if you have severe allergies or chronic conditions. Do not disregard professional medical advice or delay seeking it because of something you have read on this application.
                     </p>
                   </section>
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">Accuracy of Information</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Accuracy of Information</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       While we strive for accuracy, AI models can occasionally misinterpret labels or provide incorrect information. Always verify the information provided by PureScan with the physical product label.
                     </p>
                   </section>
@@ -2001,7 +2033,7 @@ export default function App() {
 
               {showLegalView === 'privacy' && (
                 <div className="space-y-8">
-                  <div className="bg-healthy-green/5 p-6 rounded-3xl border border-healthy-green/10">
+                  <div className="bg-healthy-green/5 dark:bg-healthy-green/10 p-6 rounded-3xl border border-healthy-green/10 dark:border-healthy-green/20">
                     <h3 className="text-sm font-bold text-healthy-green uppercase tracking-widest mb-4">30-Second Summary</h3>
                     <ul className="space-y-3">
                       {[
@@ -2010,7 +2042,7 @@ export default function App() {
                         "No PII Sharing: Your personal info stays private.",
                         "Right to be Forgotten: Wipe your data anytime."
                       ].map((text, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-gray-700">
+                        <li key={i} className="flex gap-3 text-sm text-gray-700 dark:text-gray-300">
                           <CheckCircle2 className="w-4 h-4 text-healthy-green shrink-0 mt-0.5" />
                           {text}
                         </li>
@@ -2020,20 +2052,20 @@ export default function App() {
 
                   <div className="prose prose-sm max-w-none space-y-6">
                     <section className="space-y-3">
-                      <h3 className="text-lg font-bold text-gray-900">Data Minimization</h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Data Minimization</h3>
+                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                         We do not store the original photos you take. Images are processed in RAM and deleted immediately after text extraction. Only the extracted text and analysis results are saved to your history.
                       </p>
                     </section>
                     <section className="space-y-3">
-                      <h3 className="text-lg font-bold text-gray-900">No Biometric Tracking</h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">No Biometric Tracking</h3>
+                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                         We do not use the camera to identify faces. If a face is detected in a scan, the image is automatically rejected and no data is processed.
                       </p>
                     </section>
                     <section className="space-y-3">
-                      <h3 className="text-lg font-bold text-gray-900">Third-Party Disclosures</h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Third-Party Disclosures</h3>
+                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                         We use Google Gemini AI for processing. No personally identifiable information (PII) is shared with these services. Data shared is limited to the text extracted from food labels.
                       </p>
                     </section>
@@ -2044,20 +2076,20 @@ export default function App() {
               {showLegalView === 'terms' && (
                 <div className="prose prose-sm max-w-none space-y-6">
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">"As-Is" Clause</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">"As-Is" Clause</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       PureScan is provided "as-is" without any warranties of any kind, either express or implied, including but not limited to the implied warranties of merchantability or fitness for a particular purpose.
                     </p>
                   </section>
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">User Responsibility</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">User Responsibility</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       You are solely responsible for verifying the accuracy of any information provided by the app. Always cross-reference AI results with the physical product packaging.
                     </p>
                   </section>
                   <section className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900">Automated Updates</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Automated Updates</h3>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                       We reserve the right to update these terms automatically as we add new features or improve our AI models. Continued use of the app constitutes acceptance of the updated terms.
                     </p>
                   </section>
@@ -2083,14 +2115,14 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
+              className="relative w-full max-w-sm bg-white dark:bg-dark-card rounded-[32px] p-8 shadow-2xl text-center space-y-6"
             >
               <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
                 <Smartphone className="w-8 h-8 text-healthy-green" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-900">Install PureScan AI</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Install PureScan AI</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                   Install PureScan AI on your home screen for faster access and a better experience.
                 </p>
               </div>
@@ -2104,7 +2136,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setShowInstallPopup(false)}
-                  className="w-full py-4 bg-gray-50 text-gray-500 rounded-2xl font-bold active:scale-[0.98] transition-all"
+                  className="w-full py-4 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 rounded-2xl font-bold active:scale-[0.98] transition-all"
                 >
                   MAYBE LATER
                 </button>
@@ -2129,14 +2161,14 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl text-center space-y-6"
+              className="relative w-full max-w-sm bg-white dark:bg-dark-card rounded-[32px] p-8 shadow-2xl text-center space-y-6"
             >
               <div className="w-16 h-16 bg-healthy-green/10 rounded-full flex items-center justify-center mx-auto">
                 <Heart className="w-8 h-8 text-healthy-green fill-healthy-green" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-900">Support PureScan AI</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Support PureScan AI</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                   We’re committed to keeping your health data private and ad-free. Support for direct donations is coming soon. Thank you for being part of the journey.
                 </p>
               </div>
@@ -2169,7 +2201,7 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all duration-300 ${active ? 'text-healthy-green scale-110' : 'text-gray-400'}`}
+      className={`flex flex-col items-center gap-1 transition-all duration-300 ${active ? 'text-healthy-green scale-110' : 'text-gray-400 dark:text-gray-500'}`}
     >
       <div className={`p-1 rounded-xl transition-colors ${active ? 'bg-healthy-green/10' : ''}`}>
         {icon}

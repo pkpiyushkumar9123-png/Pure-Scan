@@ -10,14 +10,28 @@
   --color-warning-amber: #FF9500;
   --color-critical-red: #FF3B30;
   --color-off-white: #F2F2F7;
+  --color-dark-bg: #0B0E14;
+  --color-dark-card: #151921;
+  --color-dark-border: #222832;
+}
+
+:root {
+  --app-bg: var(--color-off-white);
+  --app-text: #000000;
+}
+
+.dark {
+  --app-bg: var(--color-dark-bg);
+  --app-text: #F8FAFC;
 }
 
 body {
-  background-color: var(--color-off-white);
-  color: #000000;
+  background-color: var(--app-bg);
+  color: var(--app-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* PDF Export Styles (Clinical Report Aesthetic) */
