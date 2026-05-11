@@ -781,19 +781,26 @@ export default function App() {
   const exportToPDF = async () => {
     if (!scanResult) return;
     
+    // Remember current dark mode state
+    const isDark = document.documentElement.classList.contains('dark');
+    
     try {
       setIsExporting(true);
-      const element = document.getElementById('pdf-export-content');
+      setError("Preparing your report... Please wait.");
+      
+      // FORCE LIGHT MODE for PDF export (Crucial for consistent clinical look)
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+      }
+
+      const element = document.getElementById('pdf-report-capture-area');
       if (!element) {
         setError("Export system error: Content element missing.");
         return;
       }
 
-      setError("Preparing your report... Please wait.");
-
-      // Add a class to force visibility of all elements in the PDF
-      element.classList.add('export-mode-active');
-      element.classList.add('export-mode');
+      // Small delay to let styles settle after removing .dark (layout shifts)
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // html-to-image with fixed dimensions to prevent stretching
       const dataUrl = await htmlToImage.toPng(element, {
@@ -813,9 +820,6 @@ export default function App() {
         },
       });
 
-      element.classList.remove('export-mode-active');
-      element.classList.remove('export-mode');
-
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -827,47 +831,43 @@ export default function App() {
       let heightLeft = imgHeight;
       let position = 0;
 
+      // Add first page
       pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      let pageNum = 1;
-      while (heightLeft > 0) {
-        position = -(pageNum * pageHeight);
+      // Add subsequent pages only if significantly more content remains (> 5mm)
+      while (heightLeft > 5) {
         pdf.addPage();
+        position = heightLeft - imgHeight;
         pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
-        pageNum++;
       }
 
-      const fileName = `PureScan_Clinical_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
+      const fileName = `PureScan_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
       pdf.save(fileName);
       setError(null);
     } catch (err) {
       console.error("PDF Export Error:", err);
-      // Try one more time with lower scale if it's a memory issue
+      // Fallback
       try {
-        const element = document.getElementById('pdf-export-content');
+        const element = document.getElementById('pdf-report-capture-area');
         if (element) {
-          element.classList.add('export-mode');
           const dataUrl = await htmlToImage.toPng(element, { pixelRatio: 1 });
-          element.classList.remove('export-mode');
           const pdf = new jsPDF('p', 'mm', 'a4');
           const imgProps = pdf.getImageProperties(dataUrl);
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
           pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          pdf.save(`PureScan_Report_L_${Date.now()}.pdf`);
+          pdf.save(`PureScan_Report_Backup_${Date.now()}.pdf`);
           setError(null);
-          return;
         }
       } catch (innerErr) {
-        console.error("Second attempt failed:", innerErr);
-        const el = document.getElementById('pdf-export-content');
-        if (el) el.classList.remove('export-mode');
+        setError("PDF Export failed. Try again.");
       }
-      setError("PDF Export failed. Try making the window larger or refreshing.");
     } finally {
       setIsExporting(false);
+      // Restore dark mode
+      if (isDark) document.documentElement.classList.add('dark');
     }
   };
 
@@ -1253,10 +1253,13 @@ export default function App() {
                         <h3 className="font-bold text-gray-900 dark:text-white">Dark Mode</h3>
                       </div>
                       <button 
-                        onClick={() => setIsDarkMode(!isDarkMode)}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsDarkMode(!isDarkMode);
+                        }}
+                        className={`w-12 h-6 rounded-full transition-all duration-300 relative ${isDarkMode ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${isDarkMode ? 'left-7' : 'left-1'}`} />
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${isDarkMode ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
 
@@ -1534,12 +1537,12 @@ export default function App() {
               className="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-card rounded-t-[40px] z-30 shadow-2xl max-h-[90%] overflow-y-auto"
             >
               {/* PDF Content Wrapper */}
-              <div id="pdf-export-content" className="bg-white dark:bg-dark-card">
+              <div className="bg-white dark:bg-dark-card">
                 {/* Handle */}
                 <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-4 mb-2 print:hidden" />
                 
                 <div 
-                  id="pdf-export-content"
+                  id="pdf-report-capture-area"
                   className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode-active' : ''}`}
                 >
                   {/* Professional Report Header (Only for PDF) */}
