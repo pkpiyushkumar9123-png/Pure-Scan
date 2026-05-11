@@ -12,6 +12,11 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest',
+        injectManifest: {
+          globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+          globIgnores: ['**/node_modules/**/*'],
+        },
         manifest: {
           name: 'PureScan - Health First',
           short_name: 'PureScan',
