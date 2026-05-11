@@ -807,7 +807,8 @@ export default function App() {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`PureScan_Report_${Date.now()}.pdf`);
+      const fileName = `PureScan_Clinical_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
+      pdf.save(fileName);
       setError(null);
     } catch (err) {
       console.error("PDF Export Error:", err);
@@ -1522,100 +1523,105 @@ export default function App() {
                   </div>
 
                   {/* Clinical Summary Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center bg-gray-50 p-8 rounded-[32px] border border-gray-100 relative overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 p-10 rounded-[32px] border border-gray-100 relative overflow-hidden">
                     {/* Watermark for PDF */}
-                    <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none hidden print:block">
-                      <Scan className="w-48 h-48 text-gray-900" />
+                    <div className="absolute -right-8 -top-8 opacity-[0.04] pointer-events-none hidden print:block">
+                      <Scan className="w-72 h-72 text-gray-900 rotate-12" />
                     </div>
 
-                    <div className="flex justify-center">
+                    <div className="flex justify-center z-10">
                       {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
                     </div>
                     
-                    <div className="md:col-span-2 space-y-4">
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Impact Summary</h3>
-                        <p className="text-lg font-bold text-gray-900 leading-tight">
+                    <div className="md:col-span-2 space-y-6 z-10">
+                      <div className="space-y-2">
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">Impact Diagnostic</h3>
+                        <div className="h-1 w-16 bg-gray-900" />
+                        <p className="text-xl font-black text-gray-900 leading-tight">
                           {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
-                            ? "Optimal nutritional profile. Safe for standard consumption."
-                            : "Critical ingredients identified. Potential long-term health implications detected."}
+                            ? "OPTIMAL NUTRITIONAL RATIO. BIO-COMPATIBLE PROFILE."
+                            : "CRITICAL ADDITIVES DETECTED. HIGH BIO-RISK SCORE IDENTIFIED."}
                         </p>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-white rounded-2xl border border-gray-100">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Risk Level</p>
-                          <p className={`font-bold ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
-                            {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'MINIMAL'}
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="p-5 bg-white border border-gray-200 shadow-sm">
+                          <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Health Grade</p>
+                          <p className={`text-2xl font-black ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
+                            {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'RELIABLE'}
                           </p>
                         </div>
-                        <div className="p-3 bg-white rounded-2xl border border-gray-100">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Integrity</p>
-                          <p className="font-bold text-gray-900">VERIFIED AI</p>
+                        <div className="p-5 bg-white border border-gray-200 shadow-sm">
+                          <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Audit Status</p>
+                          <p className="text-2xl font-black text-gray-900">VERIFIED</p>
                         </div>
                       </div>
 
                       <button 
                         onClick={() => setShowLegalView('disclaimer')}
-                        className="text-[10px] font-bold text-gray-400 hover:text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden transition-colors"
+                        className="text-[10px] font-black text-gray-400 hover:text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden transition-all"
                       >
                         <Info className="w-3 h-3" />
-                        Cross-reference with physical packaging
+                        Clinical Reference Notice
                       </button>
                     </div>
                   </div>
 
                   {/* Risky Ingredients Analysis */}
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <div className="flex items-center justify-between border-b-2 border-gray-900 pb-4">
+                      <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
                         <AlertCircle className={`w-6 h-6 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
-                        Ingredient Audit
+                        Biochemical Audit
                       </h3>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        {scanResult?.riskyIngredients.length || 0} CONCERNS IDENTIFIED
-                      </span>
+                      <div className="text-right">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Audit Count</span>
+                        <span className="text-sm font-black text-gray-900">
+                          {scanResult?.riskyIngredients.length || 0} ITEMS DETECTED
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {scanResult?.riskyIngredients.map((ing, idx) => (
                         <div 
                           key={idx} 
-                          className={`flex flex-col p-6 rounded-3xl border transition-all duration-300 ${
-                            ing.risk === 'high' ? 'bg-red-50/50 border-red-100' : 'bg-gray-50/50 border-gray-100'
-                          } ${expandedIdx === idx ? 'ring-2 ring-gray-900/5' : ''}`}
+                          className={`flex flex-col p-6 border-b border-gray-100 transition-all duration-300 ${
+                            ing.risk === 'high' ? 'bg-red-50/20' : 'bg-transparent'
+                          }`}
                         >
                           <div className="flex items-start justify-between gap-6">
                             <div className="flex gap-5">
                               <div className="mt-1.5 min-w-[20px]">
-                                <div className={`w-3 h-3 rounded-full ${ing.risk === 'high' ? 'bg-critical-red shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-warning-amber shadow-[0_0_8px_rgba(245,158,11,0.4)]'}`} />
+                                <div className={`w-3 h-3 rounded-none rotate-45 ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
                               </div>
                               <div className="space-y-1">
-                                <h4 className={`text-lg font-bold leading-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900'}`}>{ing.name}</h4>
-                                <p className="text-xs text-gray-500 leading-relaxed font-semibold">{ing.description}</p>
+                                <h4 className={`text-lg font-black leading-tight uppercase tracking-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900'}`}>{ing.name}</h4>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wide">{ing.risk} risk factor identified</p>
+                                <p className="text-sm text-gray-600 leading-relaxed font-medium mt-2">{ing.description}</p>
                               </div>
                             </div>
                             <button 
                               onClick={() => toggleExpand(idx)}
-                              className={`p-2 rounded-full transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 text-white' : 'bg-white text-gray-300 border border-gray-100 hover:text-gray-900 shadow-sm'}`}
+                              className={`p-2 rounded-none transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 text-white' : 'bg-white text-gray-300 border border-gray-200 hover:text-gray-900'}`}
                             >
                               <Info className="w-5 h-5" />
                             </button>
                           </div>
                           
                           <div className={`overflow-hidden transition-all ${expandedIdx === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 print:max-h-none print:opacity-100'}`}>
-                            <div className="pt-6 mt-6 border-t border-gray-200/50 space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                  <h5 className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Clinical Implication</h5>
-                                  <p className="text-[13px] text-gray-700 leading-relaxed italic">
+                            <div className="pt-6 mt-4 border-t border-dashed border-gray-200 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-1">
+                                  <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Clinical Impact</h5>
+                                  <p className="text-[13px] text-gray-800 leading-relaxed font-semibold italic border-l-2 border-gray-200 pl-4">
                                     "{ing.implications}"
                                   </p>
                                 </div>
-                                <div className="hidden print:block">
-                                  <h5 className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Recommendation</h5>
+                                <div className="space-y-1 hidden print:block">
+                                  <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Precautionary Action</h5>
                                   <p className="text-[13px] text-gray-600 leading-relaxed">
-                                    Reduce intake. Seek alternative with less processed stabilizers.
+                                    Neutralize metabolic load. Seek higher purity standards.
                                   </p>
                                 </div>
                               </div>
@@ -1636,22 +1642,25 @@ export default function App() {
 
                   {/* Recommendation Section */}
                   {scanResult?.alternative && (
-                    <div className="bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden">
-                      <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                    <div className="bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16 print:hidden" />
                       <div className="space-y-4 relative z-10">
-                        <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2">
-                          <div className="w-4 h-0.5 bg-healthy-green" />
-                          Recommended Swap
+                        <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2 print:text-gray-900">
+                          <div className="w-4 h-0.5 bg-healthy-green print:bg-gray-900" />
+                          Recommended Substitution
                         </h3>
                         <div className="flex items-center justify-between gap-6">
                           <div>
-                            <h4 className="text-2xl font-black tracking-tight">{scanResult.alternative.name}</h4>
-                            <p className="text-sm text-gray-400 mt-2 leading-relaxed italic">
+                            <h4 className="text-2xl font-black tracking-tight uppercase">{scanResult.alternative.name}</h4>
+                            <p className="text-sm text-gray-400 mt-2 leading-relaxed italic print:text-gray-600">
                               {scanResult.alternative.reason}
                             </p>
                           </div>
                           <div className="p-4 bg-white/10 rounded-2xl print:hidden">
                             <CheckCircle2 className="w-8 h-8 text-healthy-green" />
+                          </div>
+                          <div className="hidden print:block p-4 border-2 border-gray-900">
+                             <CheckCircle2 className="w-8 h-8 text-gray-900" />
                           </div>
                         </div>
                       </div>

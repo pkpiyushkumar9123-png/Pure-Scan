@@ -20,7 +20,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* PDF Export Styles */
+/* PDF Export Styles (Medical Report Aesthetic) */
+.export-mode {
+  padding: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  background: #f8fafc !important; /* Subtle clinical background for the container */
+}
+
+.export-mode .report-container {
+  width: 210mm !important; /* Forces A4 width */
+  min-height: 297mm !important;
+  padding: 25mm 20mm !important; /* Professional margins */
+  margin: 0 auto !important;
+  background: white !important;
+  box-shadow: none !important;
+  border: none !important;
+  color: #0f172a !important;
+}
+
 .export-mode .hidden {
   display: block !important;
 }
@@ -42,31 +60,37 @@ body {
 }
 
 .export-mode .print\:mt-4 {
-  margin-top: 1rem !important;
+  margin-top: 1.5rem !important;
 }
 
-.export-mode {
-  padding: 0 !important;
-  max-height: none !important;
-  height: auto !important;
+/* Clinical aesthetics - removal of "mobile app" rounded vibes for paper */
+.export-mode .rounded-3xl, 
+.export-mode .rounded-\[32px\], 
+.export-mode .rounded-2xl {
+  border-radius: 4px !important; /* Crisp document edges */
+  border: 1px solid #e2e8f0 !important;
 }
 
-.export-mode .report-container {
-  padding: 30mm 20mm !important; /* Professional report margins */
-  background: white;
-  min-height: 297mm; /* A4 height */
+.export-mode .bg-gray-50, 
+.export-mode .bg-red-50\/50,
+.export-mode .bg-healthy-green\/5 {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
-/* Clinical aesthetics */
-.export-mode h1, .export-mode h2 {
-  font-family: var(--font-serif);
+.export-mode .shadow-2xl, 
+.export-mode .shadow-lg,
+.export-mode .shadow-sm {
+  box-shadow: none !important;
 }
 
-.export-mode h3, .export-mode h4, .export-mode p {
-  font-family: var(--font-sans);
+.export-mode .bg-gray-900 {
+  background: #0f172a !important;
 }
 
-.export-mode .font-mono {
-  font-family: var(--font-mono);
+.export-mode h1, .export-mode h2, .export-mode h3 {
+  font-family: var(--font-sans) !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
 }
 
