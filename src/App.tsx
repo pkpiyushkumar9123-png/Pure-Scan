@@ -24,6 +24,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 import Cropper from 'react-easy-crop';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -736,6 +738,36 @@ export default function App() {
     setExpandedIdx(expandedIdx === idx ? null : idx);
   };
 
+  const exportToPDF = async () => {
+    if (!scanResult) return;
+    
+    try {
+      const element = document.getElementById('pdf-export-content');
+      if (!element) return;
+
+      // Temporary show elements that might be hidden or in scrollable container
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`PureScan_${scanResult.productName.replace(/\s+/g, '_')}_Report.pdf`);
+    } catch (err) {
+      console.error("PDF Export failed:", err);
+      setError("Failed to generate PDF. Please try again.");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto bg-off-white overflow-hidden relative">
       {/* Header */}
@@ -1353,115 +1385,126 @@ export default function App() {
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-30 shadow-2xl max-h-[90%] overflow-y-auto"
             >
-              {/* Handle */}
-              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2" />
-              
-              <div className="p-8 space-y-8">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{scanResult?.productName || "Unknown Product"}</h2>
-                    <p className="text-gray-500 font-medium">Analyzed Result</p>
-                  </div>
-                  <button 
-                    onClick={closeResult}
-                    className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-
-                {/* Score Section */}
-                <div className="flex items-center gap-8 bg-gray-50 p-6 rounded-3xl">
-                  {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-gray-900">Health Score</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
-                        ? "This product is generally healthy and safe for consumption."
-                        : "This product contains several ingredients linked to health risks."}
-                    </p>
+              {/* PDF Content Wrapper */}
+              <div id="pdf-export-content" className="bg-white">
+                {/* Handle */}
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 print:hidden" />
+                
+                <div className="p-8 space-y-8">
+                  {/* Header */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{scanResult?.productName || "Unknown Product"}</h2>
+                      <p className="text-gray-500 font-medium">Analyzed Result</p>
+                    </div>
                     <button 
-                      onClick={() => setShowLegalView('disclaimer')}
-                      className="text-[10px] font-bold text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1"
+                      onClick={closeResult}
+                      className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors print:hidden"
                     >
-                      <Info className="w-3 h-3" />
-                      Verify with physical label
+                      <X className="w-5 h-5 text-gray-600" />
                     </button>
                   </div>
-                </div>
 
-                {/* Risk List */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <AlertCircle className={`w-5 h-5 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
-                    {scanResult?.riskyIngredients.length ? 'Risk List' : 'No Major Risks Found'}
-                  </h3>
-                  <div className="space-y-3">
-                    {scanResult?.riskyIngredients.map((ing, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`flex flex-col p-4 bg-red-50 rounded-2xl border border-red-100 transition-all duration-300 ${expandedIdx === idx ? 'ring-2 ring-critical-red/20' : ''}`}
+                  {/* Score Section */}
+                  <div className="flex items-center gap-8 bg-gray-50 p-6 rounded-3xl">
+                    {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-bold text-gray-900">Health Score</h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
+                          ? "This product is generally healthy and safe for consumption."
+                          : "This product contains several ingredients linked to health risks."}
+                      </p>
+                      <button 
+                        onClick={() => setShowLegalView('disclaimer')}
+                        className="text-[10px] font-bold text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex gap-4">
-                            <div className="mt-1">
-                              <div className={`w-2 h-2 rounded-full ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-critical-red">{ing.name}</h4>
-                              <p className="text-xs text-red-700/80 mt-1">{ing.description}</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => toggleExpand(idx)}
-                            className={`p-2 rounded-full transition-colors ${expandedIdx === idx ? 'bg-critical-red text-white' : 'bg-white text-gray-400 hover:text-critical-red'}`}
-                          >
-                            <Info className="w-4 h-4" />
-                          </button>
-                        </div>
-                        
-                        <AnimatePresence>
-                          {expandedIdx === idx && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="pt-4 mt-4 border-t border-red-200/50">
-                                <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-800 mb-2">Health Implications</h5>
-                                <p className="text-sm text-red-900 leading-relaxed">
-                                  {ing.implications}
-                                </p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Better Alternative */}
-                {scanResult?.alternative && (
-                  <div className="bg-healthy-green/5 p-6 rounded-3xl border border-healthy-green/10 space-y-3">
-                    <h3 className="text-lg font-bold text-healthy-green flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5" />
-                      Better Alternative
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-bold text-gray-900">{scanResult.alternative.name}</h4>
-                        <p className="text-sm text-gray-600">{scanResult.alternative.reason}</p>
-                      </div>
-                      <button className="p-3 bg-healthy-green text-white rounded-2xl shadow-lg shadow-green-900/20">
-                        <ChevronRight className="w-5 h-5" />
+                        <Info className="w-3 h-3" />
+                        Verify with physical label
                       </button>
                     </div>
                   </div>
-                )}
 
+                  {/* Risk List */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <AlertCircle className={`w-5 h-5 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
+                      {scanResult?.riskyIngredients.length ? 'Risk List' : 'No Major Risks Found'}
+                    </h3>
+                    <div className="space-y-3">
+                      {scanResult?.riskyIngredients.map((ing, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`flex flex-col p-4 bg-red-50 rounded-2xl border border-red-100 transition-all duration-300 ${expandedIdx === idx || true ? 'ring-2 ring-critical-red/20' : ''}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex gap-4">
+                              <div className="mt-1">
+                                <div className={`w-2 h-2 rounded-full ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-critical-red">{ing.name}</h4>
+                                <p className="text-xs text-red-700/80 mt-1">{ing.description}</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => toggleExpand(idx)}
+                              className={`p-2 rounded-full transition-colors print:hidden ${expandedIdx === idx ? 'bg-critical-red text-white' : 'bg-white text-gray-400 hover:text-critical-red'}`}
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className={`overflow-hidden ${expandedIdx === idx ? 'block' : 'hidden print:block'}`}>
+                            <div className="pt-4 mt-4 border-t border-red-200/50">
+                              <h5 className="text-[10px] font-bold uppercase tracking-wider text-red-800 mb-2">Health Implications</h5>
+                              <p className="text-sm text-red-900 leading-relaxed">
+                                {ing.implications}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Better Alternative */}
+                  {scanResult?.alternative && (
+                    <div className="bg-healthy-green/5 p-6 rounded-3xl border border-healthy-green/10 space-y-3">
+                      <h3 className="text-lg font-bold text-healthy-green flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5" />
+                        Better Alternative
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-bold text-gray-900">{scanResult.alternative.name}</h4>
+                          <p className="text-sm text-gray-600">{scanResult.alternative.reason}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PDF Disclaimer - Only visible in PDF/High detail view */}
+                  <div className="pt-8 border-t border-gray-100 hidden print:block">
+                    <div className="bg-gray-50 p-4 rounded-2xl space-y-2">
+                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Medical Disclaimer</h4>
+                       <p className="text-[10px] text-gray-500 leading-relaxed">
+                         PureScan AI results are based on computer vision analysis of the provided image. This information is for educational purposes and does not constitute medical advice. Always verify with the physical product label and consult a healthcare professional for dietary concerns.
+                       </p>
+                    </div>
+                    <p className="text-[8px] text-gray-300 mt-4 text-center">Generated by PureScan AI • Know the Truth, Improve your life</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-8 pb-8 space-y-3">
+                <button 
+                  onClick={exportToPDF}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all"
+                >
+                  <Download className="w-5 h-5" />
+                  EXPORT AS PDF
+                </button>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setStatus('editing')}
@@ -1472,7 +1515,7 @@ export default function App() {
                   </button>
                   <button 
                     onClick={closeResult}
-                    className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-xl active:scale-[0.98] transition-transform"
+                    className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-bold shadow-xl active:scale-[0.98] transition-transform"
                   >
                     GOT IT
                   </button>
