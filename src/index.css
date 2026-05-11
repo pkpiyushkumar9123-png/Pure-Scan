@@ -39,20 +39,48 @@ body {
   width: 1024px !important;
   margin: 0 auto !important;
   background: white !important;
-  padding: 80px 80px !important;
+  padding: 60px 80px 40px 80px !important; /* Optimized padding for document */
   display: flex !important;
   flex-direction: column !important;
   box-shadow: none !important;
   border: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
 }
 
 .export-mode {
   background: white !important;
-  max-width: none !important;
-  width: auto !important;
+  color: #000000 !important;
+  color-scheme: light !important;
 }
 
-/* Force standard system fonts for printing to avoid custom font loading issues in some PDF engines */
+/* Force light mode colors in PDF even if app is in dark mode */
+.export-mode,
+.export-mode *,
+.export-mode .dark\:text-white,
+.export-mode .dark\:bg-dark-card,
+.export-mode .dark\:bg-dark-bg,
+.export-mode .dark\:border-white,
+.export-mode .dark\:border-dark-border {
+  color: #000000 !important;
+  background-color: transparent !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+.export-mode .bg-white {
+  background-color: #ffffff !important;
+}
+
+/* Re-apply specific semantic colors that should stay */
+.export-mode .text-healthy-green { color: #34C759 !important; }
+.export-mode .text-critical-red { color: #FF3B30 !important; }
+.export-mode .bg-healthy-green { background-color: #34C759 !important; }
+.export-mode .bg-critical-red { background-color: #FF3B30 !important; }
+.export-mode .bg-gray-900 { background-color: #0f172a !important; color: #ffffff !important; }
+
+/* Force standard system fonts for printing */
 .export-mode * {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }

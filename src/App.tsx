@@ -788,10 +788,10 @@ export default function App() {
       setIsExporting(true);
       setError("Preparing your report... Please wait.");
       
-      // FORCE LIGHT MODE for PDF export (Crucial for consistent clinical look)
-      if (isDark) {
-        document.documentElement.classList.remove('dark');
-      }
+      // ABSOLUTE FORCE LIGHT MODE for PDF export
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.body.classList.remove('dark');
 
       const element = document.getElementById('pdf-report-capture-area');
       if (!element) {
@@ -800,7 +800,7 @@ export default function App() {
       }
 
       // Small delay to let styles settle after removing .dark (layout shifts)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // html-to-image with fixed dimensions to prevent stretching
       const dataUrl = await htmlToImage.toPng(element, {
@@ -816,11 +816,19 @@ export default function App() {
           overflow: 'visible',
           borderRadius: '0',
           transform: 'none',
-          width: '1024px'
+          width: '1024px',
+          colorScheme: 'light',
+          background: 'white'
         },
       });
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
@@ -835,8 +843,9 @@ export default function App() {
       pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      // Add subsequent pages only if significantly more content remains (> 10mm)
-      while (heightLeft > 10) {
+      // Add subsequent pages only if significant content remains (> 15mm)
+      // This prevents empty or nearly empty pages
+      while (heightLeft > 15) {
         pdf.addPage();
         position -= pageHeight;
         pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
@@ -848,26 +857,15 @@ export default function App() {
       setError(null);
     } catch (err) {
       console.error("PDF Export Error:", err);
-      // Fallback
-      try {
-        const element = document.getElementById('pdf-report-capture-area');
-        if (element) {
-          const dataUrl = await htmlToImage.toPng(element, { pixelRatio: 1 });
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const imgProps = pdf.getImageProperties(dataUrl);
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          pdf.save(`PureScan_Report_Backup_${Date.now()}.pdf`);
-          setError(null);
-        }
-      } catch (innerErr) {
-        setError("PDF Export failed. Try again.");
-      }
+      setError("PDF Export failed. Try again.");
     } finally {
       setIsExporting(false);
       // Restore dark mode
-      if (isDark) document.documentElement.classList.add('dark');
+      document.documentElement.removeAttribute('data-theme');
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      }
     }
   };
 
@@ -1245,21 +1243,23 @@ export default function App() {
                   </div>
 
                   <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
+                    <button 
+                      type="button"
+                      onClick={() => setIsDarkMode(prev => !prev)}
+                      className="w-full flex items-center justify-between group"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-900/10 dark:bg-slate-800 rounded-xl">
+                        <div className="p-2 bg-gray-900/10 dark:bg-slate-800 rounded-xl group-hover:bg-gray-900/20 dark:group-hover:bg-slate-700 transition-colors">
                           <Moon className="w-5 h-5 text-gray-900 dark:text-slate-300" />
                         </div>
                         <h3 className="font-bold text-gray-900 dark:text-white">Dark Mode</h3>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => setIsDarkMode(prev => !prev)}
+                      <div 
                         className={`w-12 h-6 rounded-full transition-all duration-300 relative ${isDarkMode ? 'bg-healthy-green' : 'bg-gray-200 dark:bg-gray-700'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${isDarkMode ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                      </div>
+                    </button>
 
                     <div className="flex items-center gap-3 border-t border-gray-100 dark:border-dark-border pt-4">
                       <div className="p-2 bg-healthy-green/10 rounded-xl">
@@ -1541,7 +1541,7 @@ export default function App() {
                 
                 <div 
                   id="pdf-report-capture-area"
-                  className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode-active' : ''}`}
+                  className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode export-mode-active' : ''}`}
                 >
                   {/* Professional Report Header (Only for PDF) */}
                   <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6 dark:border-white">
