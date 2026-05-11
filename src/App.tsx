@@ -789,29 +789,26 @@ export default function App() {
       // Remove the class after capturing
       element.classList.remove('export-mode');
 
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-      
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
+      const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      let heightLeft = pdfHeight;
+      
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+      
+      let heightLeft = imgHeight;
       let position = 0;
 
-      // Render the image onto the pages
-      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+      // First page
+      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      while (heightLeft > 1) { 
-        position = heightLeft - pdfHeight;
+      // Add multiple pages if content exceeds A4 height
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
 
@@ -1553,15 +1550,19 @@ export default function App() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-3 md:gap-6">
-                        <div className="p-4 md:p-5 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0">
-                          <p className="text-[7px] md:text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Health Grade</p>
-                          <p className={`text-lg md:text-2xl font-black truncate ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
-                            {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'RELIABLE'}
-                          </p>
+                        <div className="p-4 md:p-6 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0 overflow-hidden">
+                          <p className="text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Health Grade</p>
+                          <div className="overflow-hidden">
+                            <p className={`text-base md:text-2xl font-black truncate ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
+                              {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'RELIABLE'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="p-4 md:p-5 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0">
-                          <p className="text-[7px] md:text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Audit Status</p>
-                          <p className="text-lg md:text-2xl font-black text-gray-900 truncate">VERIFIED</p>
+                        <div className="p-4 md:p-6 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0 overflow-hidden">
+                          <p className="text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Audit Status</p>
+                          <div className="overflow-hidden">
+                            <p className="text-base md:text-2xl font-black text-gray-900 truncate">VERIFIED</p>
+                          </div>
                         </div>
                       </div>
 

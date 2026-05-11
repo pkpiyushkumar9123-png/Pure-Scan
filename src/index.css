@@ -34,18 +34,18 @@ body {
 }
 
 .export-mode .report-container {
-  width: 210mm !important; /* Strict A4 width */
-  min-height: 297mm !important;
-  padding: 20mm 15mm !important; /* Clinical margins */
-  margin: 0 !important;
+  width: 794px !important; /* A4 width at 96 DPI */
+  min-height: 1123px !important; /* A4 height at 96 DPI */
+  padding: 60px 40px !important;
+  margin: 0 auto !important;
   background: white !important;
   box-shadow: none !important;
   border: none !important;
   color: #0f172a !important;
   display: flex !important;
   flex-direction: column !important;
-  font-size: 11pt !important;
-  line-height: 1.4 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
 }
 
 /* Force standard system fonts for printing to avoid custom font loading issues in some PDF engines */
