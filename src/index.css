@@ -21,31 +21,22 @@ body {
 }
 
 /* PDF Export Styles (Clinical Report Aesthetic) */
-.export-mode {
-  padding: 0 !important;
-  max-height: none !important;
-  height: auto !important;
-  background: #f1f5f9 !important; /* Medical background gray */
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-
-.export-mode .report-container {
-  width: 794px !important; /* A4 width at 96 DPI */
-  min-height: 1123px !important; /* A4 height at 96 DPI */
-  padding: 60px 40px !important;
+.export-mode-active {
+  width: 1024px !important;
   margin: 0 auto !important;
   background: white !important;
-  box-shadow: none !important;
-  border: none !important;
-  color: #0f172a !important;
+  padding: 80px 80px !important;
+  min-height: 1448px !important; /* Proper ratio for 1024px width A4 */
   display: flex !important;
   flex-direction: column !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.export-mode {
+  background: white !important;
+  max-width: none !important;
+  width: auto !important;
 }
 
 /* Force standard system fonts for printing to avoid custom font loading issues in some PDF engines */

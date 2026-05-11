@@ -189,6 +189,7 @@ export default function App() {
   const [showDietaryView, setShowDietaryView] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(!hasAcceptedTerms);
   const [showSupportPopup, setShowSupportPopup] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -761,6 +762,7 @@ export default function App() {
     if (!scanResult) return;
     
     try {
+      setIsExporting(true);
       const element = document.getElementById('pdf-export-content');
       if (!element) {
         setError("Export system error: Content element missing.");
@@ -770,46 +772,49 @@ export default function App() {
       setError("Preparing your report... Please wait.");
 
       // Add a class to force visibility of all elements in the PDF
-      element.classList.add('export-mode');
+      element.classList.add('export-mode-active');
 
-      // html-to-image is generally more reliable than html2canvas
+      // html-to-image with fixed dimensions to prevent stretching
       const dataUrl = await htmlToImage.toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
+        width: 1024,
         style: {
+          padding: '0',
+          margin: '0',
           maxHeight: 'none',
           height: 'auto',
           overflow: 'visible',
           borderRadius: '0',
           transform: 'none',
+          width: '1024px'
         },
       });
 
-      // Remove the class after capturing
-      element.classList.remove('export-mode');
+      element.classList.remove('export-mode-active');
 
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(dataUrl);
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
+      const imgProps = pdf.getImageProperties(dataUrl);
       const imgWidth = pageWidth;
       const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
       
       let heightLeft = imgHeight;
       let position = 0;
 
-      // First page
       pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      // Add multiple pages if content exceeds A4 height
+      let pageNum = 1;
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position = -(pageNum * pageHeight);
         pdf.addPage();
         pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
+        pageNum++;
       }
 
       const fileName = `PureScan_Clinical_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
@@ -839,6 +844,8 @@ export default function App() {
         if (el) el.classList.remove('export-mode');
       }
       setError("PDF Export failed. Try making the window larger or refreshing.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1494,7 +1501,10 @@ export default function App() {
                 {/* Handle */}
                 <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 print:hidden" />
                 
-                <div className="p-8 space-y-10 report-container">
+                <div 
+                  id="pdf-export-content"
+                  className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode-active' : ''}`}
+                >
                   {/* Professional Report Header (Only for PDF) */}
                   <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6">
                     <div className="space-y-1">
@@ -1549,19 +1559,19 @@ export default function App() {
                         </p>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-3 md:gap-6">
-                        <div className="p-4 md:p-6 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0 overflow-hidden">
-                          <p className="text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Health Grade</p>
-                          <div className="overflow-hidden">
-                            <p className={`text-base md:text-2xl font-black truncate ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
+                      <div className="grid grid-cols-2 gap-4 md:gap-6">
+                        <div className="p-4 md:px-6 md:py-8 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
+                          <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Health Grade</p>
+                          <div className="w-full flex items-center justify-center">
+                            <p className={`text-sm sm:text-lg md:text-2xl lg:text-3xl font-black truncate leading-none ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
                               {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'RELIABLE'}
                             </p>
                           </div>
                         </div>
-                        <div className="p-4 md:p-6 bg-white border border-gray-200 shadow-sm flex flex-col justify-center min-w-0 overflow-hidden">
-                          <p className="text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 md:mb-2 truncate">Audit Status</p>
-                          <div className="overflow-hidden">
-                            <p className="text-base md:text-2xl font-black text-gray-900 truncate">VERIFIED</p>
+                        <div className="p-4 md:px-6 md:py-8 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
+                          <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Audit Status</p>
+                          <div className="w-full flex items-center justify-center">
+                            <p className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-black text-gray-900 truncate leading-none uppercase">VERIFIED</p>
                           </div>
                         </div>
                       </div>
