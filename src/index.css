@@ -20,23 +20,41 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* PDF Export Styles (Medical Report Aesthetic) */
+/* PDF Export Styles (Clinical Report Aesthetic) */
 .export-mode {
   padding: 0 !important;
   max-height: none !important;
   height: auto !important;
-  background: #f8fafc !important; /* Subtle clinical background for the container */
+  background: #f1f5f9 !important; /* Medical background gray */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 .export-mode .report-container {
-  width: 210mm !important; /* Forces A4 width */
+  width: 210mm !important; /* Strict A4 width */
   min-height: 297mm !important;
-  padding: 25mm 20mm !important; /* Professional margins */
-  margin: 0 auto !important;
+  padding: 20mm 15mm !important; /* Clinical margins */
+  margin: 0 !important;
   background: white !important;
   box-shadow: none !important;
   border: none !important;
   color: #0f172a !important;
+  display: flex !important;
+  flex-direction: column !important;
+  font-size: 11pt !important;
+  line-height: 1.4 !important;
+}
+
+/* Force standard system fonts for printing to avoid custom font loading issues in some PDF engines */
+.export-mode * {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.export-mode .font-mono, .export-mode code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }
 
 .export-mode .hidden {
