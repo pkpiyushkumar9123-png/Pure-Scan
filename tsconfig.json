@@ -13,6 +13,7 @@
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
+    "baseUrl": ".",
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
@@ -20,7 +21,7 @@
         "./*"
       ]
     },
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "noEmit": true,
     "types": ["vite/client", "vite-plugin-pwa/client"]
   }
