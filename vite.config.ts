@@ -12,11 +12,6 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        strategies: 'injectManifest',
-        injectManifest: {
-          globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-          globIgnores: ['**/node_modules/**/*'],
-        },
         manifest: {
           name: 'PureScan - Health First',
           short_name: 'PureScan',
@@ -26,22 +21,14 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: '/favicon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
-              purpose: 'any'
-            },
-            {
-              src: '/favicon-192x192.png',
+              src: '/icon.png',
               sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any maskable'
+              type: 'image/png'
             },
             {
-              src: '/favicon-512x512.png',
+              src: '/icon.png',
               sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
+              type: 'image/png'
             }
           ]
         }
@@ -57,7 +44,7 @@ export default defineConfig(({mode}) => {
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify – file watching is disabled to prevent flickering during agent edits.
+      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
   };
