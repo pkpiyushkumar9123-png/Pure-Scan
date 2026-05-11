@@ -57,28 +57,54 @@ body {
 
 /* Force light mode colors in PDF even if app is in dark mode */
 .export-mode,
-.export-mode *,
 .export-mode .dark\:text-white,
 .export-mode .dark\:bg-dark-card,
-.export-mode .dark\:bg-dark-bg,
-.export-mode .dark\:border-white,
-.export-mode .dark\:border-dark-border {
-  color: #000000 !important;
-  background-color: transparent !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: none !important;
+.export-mode .dark\:bg-dark-bg {
+  color: #0f172a !important; /* Professional Slate-900 color for text */
 }
 
+.export-mode .dark\:bg-dark-card,
+.export-mode .dark\:bg-dark-bg {
+  background-color: #ffffff !important;
+}
+
+.export-mode .dark\:border-white,
+.export-mode .dark\:border-dark-border {
+  border-color: #e2e8f0 !important;
+}
+
+/* Ensure background cards have a subtle fill for structure */
+.export-mode .bg-white.dark\:bg-dark-card,
 .export-mode .bg-white {
   background-color: #ffffff !important;
 }
 
-/* Re-apply specific semantic colors that should stay */
-.export-mode .text-healthy-green { color: #34C759 !important; }
-.export-mode .text-critical-red { color: #FF3B30 !important; }
-.export-mode .bg-healthy-green { background-color: #34C759 !important; }
-.export-mode .bg-critical-red { background-color: #FF3B30 !important; }
-.export-mode .bg-gray-900 { background-color: #0f172a !important; color: #ffffff !important; }
+.export-mode .bg-gray-50,
+.export-mode .dark\:bg-slate-900 {
+  background-color: #f8fafc !important;
+}
+
+/* Semantic colors reset for paper */
+.export-mode .text-healthy-green { color: #166534 !important; } /* Darker green for readability */
+.export-mode .text-warning-amber { color: #9a3412 !important; } /* Darker amber */
+.export-mode .text-critical-red { color: #991b1b !important; } /* Darker red */
+
+.export-mode .bg-healthy-green\/10,
+.export-mode .dark\:bg-healthy-green\/20 {
+  background-color: #f0fdf4 !important;
+  border: 1px solid #dcfce7 !important;
+}
+
+.export-mode .bg-critical-red\/10,
+.export-mode .dark\:bg-critical-red\/20 {
+  background-color: #fef2f2 !important;
+  border: 1px solid #fee2e2 !important;
+}
+
+/* Clean up shadows for flat document */
+.export-mode * {
+  box-shadow: none !important;
+}
 
 /* Force standard system fonts for printing */
 .export-mode * {

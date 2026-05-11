@@ -800,7 +800,7 @@ export default function App() {
       }
 
       // Small delay to let styles settle after removing .dark (layout shifts)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       // html-to-image with fixed dimensions to prevent stretching
       const dataUrl = await htmlToImage.toPng(element, {
@@ -818,7 +818,11 @@ export default function App() {
           transform: 'none',
           width: '1024px',
           colorScheme: 'light',
-          background: 'white'
+          background: 'white',
+          // Force layout centering for capture
+          display: 'block',
+          marginLeft: 'auto',
+          marginRight: 'auto'
         },
       });
 
@@ -832,24 +836,28 @@ export default function App() {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
+      // Professional margins (10mm on each side)
+      const margin = 10;
+      const usableHeight = pageHeight - (margin * 2);
+      const contentWidth = pageWidth - (margin * 2);
+      
       const imgProps = pdf.getImageProperties(dataUrl);
-      const imgWidth = pageWidth;
-      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+      const imgWidth = contentWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = margin; // Start at top margin
 
       // Add first page
-      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
+      pdf.addImage(dataUrl, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= usableHeight;
 
       // Add subsequent pages only if significant content remains (> 15mm)
-      // This prevents empty or nearly empty pages
       while (heightLeft > 15) {
         pdf.addPage();
-        position -= pageHeight;
-        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
+        position -= usableHeight;
+        pdf.addImage(dataUrl, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= usableHeight;
       }
 
       const fileName = `PureScan_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
