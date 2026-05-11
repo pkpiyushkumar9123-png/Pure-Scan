@@ -788,7 +788,7 @@ export default function App() {
       setIsExporting(true);
       setError("Preparing your report... Please wait.");
       
-      // FORCE LIGHT MODE for PDF export (Crucial for consistent clinical look)
+      // FORCE LIGHT MODE for PDF export
       if (isDark) {
         document.documentElement.classList.remove('dark');
       }
@@ -799,10 +799,13 @@ export default function App() {
         return;
       }
 
-      // Small delay to let styles settle after removing .dark (layout shifts)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Add export-mode for specific clinical styling defined in index.css
+      element.classList.add('export-mode');
 
-      // html-to-image with fixed dimensions to prevent stretching
+      // Small delay to let styles settle after removing .dark
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // html-to-image with fixed dimensions
       const dataUrl = await htmlToImage.toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
@@ -820,6 +823,9 @@ export default function App() {
         },
       });
 
+      // Remove the class immediately after capture
+      element.classList.remove('export-mode');
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -835,8 +841,8 @@ export default function App() {
       pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
-      // Add subsequent pages only if significantly more content remains (> 10mm)
-      while (heightLeft > 10) {
+      // Add subsequent pages only if significantly more content remains (> 15mm to avoid tiny empty slices)
+      while (heightLeft > 15) {
         pdf.addPage();
         position -= pageHeight;
         pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
