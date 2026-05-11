@@ -766,76 +766,89 @@ export default function App() {
     
     try {
       setIsExporting(true);
-      const container = document.getElementById('pdf-export-content');
-      if (!container) {
+      const element = document.getElementById('pdf-export-content');
+      if (!element) {
         setError("Export system error: Content element missing.");
         return;
       }
 
-      setError("Assembling professional report sections...");
+      setError("Preparing your report... Please wait.");
 
-      // Add classes for styling
-      container.classList.add('export-mode-active');
-      container.classList.add('export-mode');
+      // Add a class to force visibility of all elements in the PDF
+      element.classList.add('export-mode-active');
+      element.classList.add('export-mode');
+
+      // html-to-image with fixed dimensions to prevent stretching
+      const dataUrl = await htmlToImage.toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        width: 1024,
+        style: {
+          padding: '0',
+          margin: '0',
+          maxHeight: 'none',
+          height: 'auto',
+          overflow: 'visible',
+          borderRadius: '0',
+          transform: 'none',
+          width: '1024px'
+        },
+      });
+
+      element.classList.remove('export-mode-active');
+      element.classList.remove('export-mode');
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Clinical margins
-      const marginX = 15;
-      const marginY = 20;
-      let cursorY = marginY;
-
-      // Select individual sections
-      const sections = container.querySelectorAll('.report-section');
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
       
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i] as HTMLElement;
-        
-        // Render section to image
-        const dataUrl = await htmlToImage.toPng(section, {
-          quality: 1.0,
-          pixelRatio: 2,
-          backgroundColor: '#ffffff',
-          width: 1024,
-          style: {
-            padding: '0',
-            margin: '0',
-            borderRadius: '0',
-            transform: 'none',
-          }
-        });
+      let heightLeft = imgHeight;
+      let position = 0;
 
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const imgWidth = pageWidth - (marginX * 2);
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
 
-        // Check for page break: if section doesn't fit, move to next page
-        if (cursorY + imgHeight > pageHeight - marginY) {
-          pdf.addPage();
-          cursorY = marginY;
-        }
-
-        pdf.addImage(dataUrl, 'PNG', marginX, cursorY, imgWidth, imgHeight, undefined, 'FAST');
-        cursorY += imgHeight + 8; // Small gap between sections
+      let pageNum = 1;
+      while (heightLeft > 0) {
+        position = -(pageNum * pageHeight);
+        pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+        pageNum++;
       }
-
-      // Cleanup
-      container.classList.remove('export-mode-active');
-      container.classList.remove('export-mode');
 
       const fileName = `PureScan_Clinical_Report_${scanResult.productName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.pdf`;
       pdf.save(fileName);
       setError(null);
     } catch (err) {
-      console.error("PDF Export error:", err);
-      const el = document.getElementById('pdf-export-content');
-      if (el) {
-        el.classList.remove('export-mode-active');
-        el.classList.remove('export-mode');
+      console.error("PDF Export Error:", err);
+      // Try one more time with lower scale if it's a memory issue
+      try {
+        const element = document.getElementById('pdf-export-content');
+        if (element) {
+          element.classList.add('export-mode');
+          const dataUrl = await htmlToImage.toPng(element, { pixelRatio: 1 });
+          element.classList.remove('export-mode');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const imgProps = pdf.getImageProperties(dataUrl);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`PureScan_Report_L_${Date.now()}.pdf`);
+          setError(null);
+          return;
+        }
+      } catch (innerErr) {
+        console.error("Second attempt failed:", innerErr);
+        const el = document.getElementById('pdf-export-content');
+        if (el) el.classList.remove('export-mode');
       }
-      setError("PDF Export failed. Please try again.");
+      setError("PDF Export failed. Try making the window larger or refreshing.");
     } finally {
       setIsExporting(false);
     }
@@ -1489,7 +1502,7 @@ export default function App() {
               className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-30 shadow-2xl max-h-[90%] overflow-y-auto"
             >
               {/* PDF Content Wrapper */}
-              <div className="bg-white">
+              <div id="pdf-export-content" className="bg-white">
                 {/* Handle */}
                 <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 print:hidden" />
                 
@@ -1498,7 +1511,7 @@ export default function App() {
                   className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode-active' : ''}`}
                 >
                   {/* Professional Report Header (Only for PDF) */}
-                  <div className="report-section hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6">
+                  <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
@@ -1530,7 +1543,7 @@ export default function App() {
                   </div>
 
                   {/* Clinical Summary Section */}
-                  <div className="report-section grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 p-10 rounded-[32px] border border-gray-100 relative overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 p-10 rounded-[32px] border border-gray-100 relative overflow-hidden">
                     {/* Watermark for PDF */}
                     <div className="absolute -right-8 -top-8 opacity-[0.04] pointer-events-none hidden print:block">
                       <Scan className="w-72 h-72 text-gray-900 rotate-12" />
@@ -1579,7 +1592,7 @@ export default function App() {
                   </div>
 
                   {/* Risky Ingredients Analysis */}
-                  <div className="report-section space-y-6">
+                  <div className="space-y-6">
                     <div className="flex items-center justify-between border-b-2 border-gray-900 pb-4">
                       <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
                         <AlertCircle className={`w-6 h-6 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
@@ -1653,7 +1666,7 @@ export default function App() {
 
                   {/* Recommendation Section */}
                   {scanResult?.alternative && (
-                    <div className="report-section bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
+                    <div className="bg-gray-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
                       <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16 print:hidden" />
                       <div className="space-y-4 relative z-10">
                         <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2 print:text-gray-900">
@@ -1677,7 +1690,7 @@ export default function App() {
                       </div>
                     </div>
                   )}                  {/* PDF Mission & Disclaimer - Only visible in PDF/High detail view */}
-                  <div className="report-section pt-10 border-t-2 border-gray-900 hidden print:block space-y-10">
+                  <div className="pt-10 border-t-2 border-gray-900 hidden print:block space-y-10">
                     {/* Vision Section */}
                     <div className="bg-gray-50 border border-gray-200 p-8 rounded-2xl">
                       <div className="flex gap-6 items-start">
