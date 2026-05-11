@@ -192,6 +192,25 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
+  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (['detecting', 'extracting', 'analyzing'].includes(status)) {
+      if (countdown === 0) setCountdown(15);
+      
+      countdownInterval.current = setInterval(() => {
+        setCountdown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else {
+      if (countdownInterval.current) clearInterval(countdownInterval.current);
+      setCountdown(0);
+    }
+    
+    return () => {
+      if (countdownInterval.current) clearInterval(countdownInterval.current);
+    };
+  }, [status]);
 
   const FORBIDDEN_KEYWORDS = dietaryPreferences;
   
@@ -920,21 +939,51 @@ export default function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-white p-8 space-y-6"
+                    className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-white p-8 space-y-6 relative"
                   >
+                    {/* Countdown Timer */}
+                    <div className="absolute top-6 right-6 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                      <div className="w-2 h-2 rounded-full bg-healthy-green animate-pulse" />
+                      <span className="text-xs font-mono font-bold tracking-wider">{countdown}s</span>
+                    </div>
+
                     <div className="relative">
                       <div className="w-24 h-24 border-4 border-healthy-green/20 rounded-full animate-pulse" />
                       <Loader2 className="w-12 h-12 text-healthy-green animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                     </div>
-                    <div className="text-center space-y-2">
+                    <div className="text-center space-y-2 w-full">
                       <h3 className="text-xl font-bold">
                         {status === 'detecting' ? 'Auto-detecting Label...' : 
-                         status === 'extracting' ? 'Detecting Ingredients...' : 'Analyzing Health Risks...'}
+                         status === 'extracting' ? 'Reading Ingredients...' : 'Analyzing Health Risks...'}
                       </h3>
                       <p className="text-sm text-white/60">
                         {status === 'detecting' ? 'Finding the nutrition facts area' :
-                         status === 'extracting' ? 'Our AI is reading the label text' : 'Checking for risky additives'}
+                         status === 'extracting' ? 'Our AI is processing the label text' : 'Checking for risky additives'}
                       </p>
+
+                      {/* Progress Bar Container */}
+                      <div className="pt-6 w-full max-w-[240px] mx-auto space-y-2">
+                        <div className="flex justify-between items-end px-1">
+                          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                            {status === 'detecting' ? 'Step 1 of 3' : 
+                             status === 'extracting' ? 'Step 2 of 3' : 'Step 3 of 3'}
+                          </span>
+                          <span className="text-[10px] font-bold text-healthy-green">
+                            {status === 'detecting' ? '30%' : 
+                             status === 'extracting' ? '65%' : '90%'}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ 
+                              width: status === 'detecting' ? '30%' : 
+                                     status === 'extracting' ? '65%' : '90%' 
+                            }}
+                            className="h-full bg-healthy-green rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}
