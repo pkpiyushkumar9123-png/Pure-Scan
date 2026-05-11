@@ -39,7 +39,7 @@ body {
   width: 1024px !important;
   margin: 0 auto !important;
   background: white !important;
-  padding: 60px 80px 40px 80px !important; /* Optimized padding for document */
+  padding: 80px 100px 60px 100px !important; /* Professional document margins */
   display: flex !important;
   flex-direction: column !important;
   box-shadow: none !important;
@@ -55,12 +55,24 @@ body {
   color-scheme: light !important;
 }
 
-/* Force light mode colors in PDF even if app is in dark mode */
+/* Typography Overrides for Export */
+.export-mode .serif-header {
+  font-family: var(--font-serif) !important;
+  letter-spacing: -0.02em !important;
+}
+
+.export-mode .serif-title {
+  font-family: var(--font-serif) !important;
+  font-weight: 900 !important;
+  font-size: 42px !important;
+}
+
+/* Force light mode colors in PDF */
 .export-mode,
 .export-mode .dark\:text-white,
 .export-mode .dark\:bg-dark-card,
 .export-mode .dark\:bg-dark-bg {
-  color: #0f172a !important; /* Professional Slate-900 color for text */
+  color: #0f172a !important;
 }
 
 .export-mode .dark\:bg-dark-card,
@@ -73,47 +85,31 @@ body {
   border-color: #e2e8f0 !important;
 }
 
-/* Ensure background cards have a subtle fill for structure */
-.export-mode .bg-white.dark\:bg-dark-card,
-.export-mode .bg-white {
-  background-color: #ffffff !important;
-}
-
 .export-mode .bg-gray-50,
 .export-mode .dark\:bg-slate-900 {
   background-color: #f8fafc !important;
 }
 
-/* Semantic colors reset for paper */
-.export-mode .text-healthy-green { color: #166534 !important; } /* Darker green for readability */
-.export-mode .text-warning-amber { color: #9a3412 !important; } /* Darker amber */
-.export-mode .text-critical-red { color: #991b1b !important; } /* Darker red */
-
-.export-mode .bg-healthy-green\/10,
-.export-mode .dark\:bg-healthy-green\/20 {
-  background-color: #f0fdf4 !important;
-  border: 1px solid #dcfce7 !important;
+/* Card aesthetics for PDF */
+.export-mode .ingredient-card {
+  border-radius: 20px !important;
+  border: 1px solid transparent !important;
+  padding: 24px !important;
+  margin-bottom: 20px !important;
 }
 
-.export-mode .bg-critical-red\/10,
-.export-mode .dark\:bg-critical-red\/20 {
-  background-color: #fef2f2 !important;
-  border: 1px solid #fee2e2 !important;
+.export-mode .ingredient-card-high {
+  background-color: #fff1f2 !important; /* Soft red-50 */
 }
 
-/* Clean up shadows for flat document */
-.export-mode * {
-  box-shadow: none !important;
+.export-mode .ingredient-card-medium {
+  background-color: #fffbeb !important; /* Soft amber-50 */
 }
 
-/* Force standard system fonts for printing */
-.export-mode * {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-}
-
-.export-mode .font-mono, .export-mode code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-}
+/* Semantic colors reset */
+.export-mode .text-healthy-green { color: #16a34a !important; }
+.export-mode .text-warning-amber { color: #d97706 !important; }
+.export-mode .text-critical-red { color: #dc2626 !important; }
 
 .export-mode .hidden {
   display: block !important;
@@ -121,10 +117,6 @@ body {
 
 .export-mode .print\:hidden {
   display: none !important;
-}
-
-.export-mode .print\:block {
-  display: block !important;
 }
 
 .export-mode .print\:flex {
@@ -139,34 +131,20 @@ body {
   margin-top: 1.5rem !important;
 }
 
-/* Clinical aesthetics - removal of "mobile app" rounded vibes for paper */
-.export-mode .rounded-3xl, 
-.export-mode .rounded-\[32px\], 
-.export-mode .rounded-2xl {
-  border-radius: 4px !important; /* Crisp document edges */
-  border: 1px solid #e2e8f0 !important;
-}
-
-.export-mode .bg-gray-50, 
-.export-mode .bg-red-50\/50,
-.export-mode .bg-healthy-green\/5 {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-}
-
 .export-mode .shadow-2xl, 
 .export-mode .shadow-lg,
 .export-mode .shadow-sm {
   box-shadow: none !important;
 }
 
-.export-mode .bg-gray-900 {
-  background: #0f172a !important;
-}
-
 .export-mode h1, .export-mode h2, .export-mode h3 {
-  font-family: var(--font-sans) !important;
-  font-weight: 800 !important;
   color: #0f172a !important;
 }
 
+/* Custom Dividers */
+.export-mode .pdf-divider {
+  height: 1px !important;
+  background-color: #000 !important;
+  width: 100% !important;
+  margin: 40px 0 !important;
+}

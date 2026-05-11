@@ -1549,248 +1549,181 @@ export default function App() {
                 
                 <div 
                   id="pdf-report-capture-area"
-                  className={`p-8 space-y-10 report-container ${isExporting ? 'export-mode export-mode-active' : ''}`}
+                  className={`p-8 space-y-12 report-container ${isExporting ? 'export-mode export-mode-active' : ''}`}
                 >
-                  {/* Professional Report Header (Only for PDF) */}
-                  <div className="hidden print:flex justify-between items-start border-b-2 border-gray-900 pb-6 dark:border-white">
+                  {/* Professional Report Header (PDF Refined) */}
+                  <div className="flex justify-between items-center border-b border-gray-900 pb-8 dark:border-white">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center">
-                          <Scan className="w-5 h-5 text-white dark:text-gray-900" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center">
+                          <Scan className="w-6 h-6 text-white dark:text-gray-900" />
                         </div>
-                        <h1 className="text-xl font-black tracking-tighter uppercase dark:text-white">PureScan Clinical</h1>
+                        <h1 className="text-2xl font-black tracking-tighter serif-header dark:text-white uppercase">PURESCAN CLINICAL</h1>
                       </div>
-                      <p className="text-[10px] text-gray-500 font-mono">DOCUMENT REF: PS-{scanResult?.id.slice(0,8).toUpperCase() || "RA-0000"}</p>
+                      <p className="text-[10px] text-gray-500 font-mono tracking-widest mt-2 uppercase">DOCUMENT REF: PS-{scanResult?.id.slice(0,8).toUpperCase() || "8D038A44"}</p>
                     </div>
                     <div className="text-right space-y-1">
-                      <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">Health Audit Report</h2>
-                      <p className="text-[10px] text-gray-500 font-medium">Issue Date: {new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                      <p className="text-[10px] text-gray-400 font-mono uppercase">System: AIS-GEMINI-CORE-3.0</p>
+                      <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white serif-header">Health Audit Report</h2>
+                      <p className="text-[10px] text-gray-500 font-medium">Issue Date: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-gray-400 font-mono uppercase">SYSTEM: AIS-GEMINI-CORE-3.0</p>
                     </div>
                   </div>
 
                   {/* Standard Header (App View) */}
-                  <div className="flex items-start justify-between print:mt-4">
-                    <div>
-                      <h2 className="text-3xl font-black text-gray-900 dark:text-white leading-tight">{scanResult?.productName || "Unknown Product"}</h2>
-                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-1">Biochemical Analysis Result</p>
-                    </div>
-                    <button 
-                      onClick={closeResult}
-                      className="p-2 bg-gray-100 dark:bg-slate-800 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors print:hidden"
-                    >
-                      <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                    </button>
+                  <div className="flex flex-col items-center justify-center pt-8 text-center">
+                    <h2 className="serif-title text-gray-900 dark:text-white leading-tight mb-2">
+                      {scanResult?.productName || "Unknown Product"}
+                    </h2>
+                    <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] mt-4">BIOCHEMICAL ANALYSIS RESULT</p>
                   </div>
 
-                  {/* Clinical Summary Section */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 dark:bg-slate-900/50 p-10 rounded-[32px] border border-gray-100 dark:border-dark-border relative overflow-hidden">
-                    {/* Watermark for PDF */}
-                    <div className="absolute -right-8 -top-8 opacity-[0.04] pointer-events-none hidden print:block">
-                      <Scan className="w-72 h-72 text-gray-900 dark:text-white rotate-12" />
-                    </div>
-
-                    <div className="flex justify-center z-10">
-                      {scanResult && <CircularProgress score={scanResult.score} grade={scanResult.grade} />}
-                    </div>
-                    
-                    <div className="md:col-span-2 space-y-6 z-10">
-                      <div className="space-y-2">
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">Impact Diagnostic</h3>
-                        <div className="h-1 w-16 bg-gray-900 dark:bg-white" />
-                        <p className="text-xl font-black text-gray-900 dark:text-white leading-tight">
-                          {scanResult?.grade === 'A' || scanResult?.grade === 'B' 
-                            ? "OPTIMAL NUTRITIONAL RATIO. BIO-COMPATIBLE PROFILE."
-                            : "CRITICAL ADDITIVES DETECTED. HIGH BIO-RISK SCORE IDENTIFIED."}
-                        </p>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 md:gap-6">
-                        <div className="p-4 md:px-6 md:py-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
-                          <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Health Grade</p>
-                          <div className="w-full flex items-center justify-center">
-                            <p className={`text-sm sm:text-lg md:text-2xl lg:text-3xl font-black truncate leading-none ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-healthy-green'}`}>
-                              {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'RELIABLE'}
-                            </p>
+                  {/* Impact Summary Section */}
+                  <div className="flex flex-col items-center space-y-8">
+                    <div className="relative">
+                      {scanResult && (
+                        <div className="relative flex items-center justify-center w-48 h-48">
+                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              stroke="#F3F4F6"
+                              strokeWidth="8"
+                              fill="transparent"
+                            />
+                            <motion.circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              stroke="#F97316" // Orange accent from design
+                              strokeWidth="10"
+                              fill="transparent"
+                              strokeDasharray={2 * Math.PI * 40}
+                              initial={{ strokeDashoffset: 2 * Math.PI * 40 }}
+                              animate={{ strokeDashoffset: (2 * Math.PI * 40) - (scanResult.score / 100) * (2 * Math.PI * 40) }}
+                              transition={{ duration: 1.5 }}
+                              strokeLinecap="butt"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-7xl font-black text-[#F97316] serif-header">{scanResult.grade}</span>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">SCORE {scanResult.score}</span>
                           </div>
-                        </div>
-                        <div className="p-4 md:px-6 md:py-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm flex flex-col items-center justify-center min-w-0 overflow-hidden text-center">
-                          <p className="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 truncate w-full">Audit Status</p>
-                          <div className="w-full flex items-center justify-center">
-                            <p className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white truncate leading-none uppercase">VERIFIED</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={() => setShowLegalView('disclaimer')}
-                        className="text-[10px] font-black text-gray-400 hover:text-healthy-green uppercase tracking-widest mt-2 flex items-center gap-1 print:hidden transition-all"
-                      >
-                        <Info className="w-3 h-3" />
-                        Clinical Reference Notice
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Risky Ingredients Analysis */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b-2 border-gray-900 dark:border-white pb-4">
-                      <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                        <AlertCircle className={`w-6 h-6 ${scanResult?.riskyIngredients.length ? 'text-critical-red' : 'text-healthy-green'}`} />
-                        Biochemical Audit
-                      </h3>
-                      <div className="text-right">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Audit Count</span>
-                        <span className="text-sm font-black text-gray-900 dark:text-white">
-                          {scanResult?.riskyIngredients.length || 0} ITEMS DETECTED
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      {scanResult?.riskyIngredients.map((ing, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`flex flex-col p-6 border-b border-gray-100 dark:border-dark-border transition-all duration-300 ${
-                            ing.risk === 'high' ? 'bg-red-50/20 dark:bg-red-900/10' : 'bg-transparent'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-6">
-                            <div className="flex gap-5">
-                              <div className="mt-1.5 min-w-[20px]">
-                                <div className={`w-3 h-3 rounded-none rotate-45 ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
-                              </div>
-                              <div className="space-y-1">
-                                <h4 className={`text-lg font-black leading-tight uppercase tracking-tight ${ing.risk === 'high' ? 'text-critical-red' : 'text-gray-900 dark:text-white'}`}>{ing.name}</h4>
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wide">{ing.risk} risk factor identified</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium mt-2">{ing.description}</p>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => toggleExpand(idx)}
-                              className={`p-2 rounded-none transition-colors print:hidden shrink-0 ${expandedIdx === idx ? 'bg-gray-900 dark:bg-white dark:text-gray-900 text-white' : 'bg-white dark:bg-slate-800 text-gray-300 dark:text-gray-500 border border-gray-200 dark:border-dark-border hover:text-gray-900 dark:hover:text-white'}`}
-                            >
-                              <Info className="w-5 h-5" />
-                            </button>
-                          </div>
-                          
-                          <div className={`overflow-hidden transition-all ${expandedIdx === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 print:max-h-none print:opacity-100'}`}>
-                            <div className="pt-6 mt-4 border-t border-dashed border-gray-200 dark:border-dark-border space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-1">
-                                  <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Clinical Impact</h5>
-                                  <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed font-semibold italic border-l-2 border-gray-200 dark:border-dark-border pl-4">
-                                    "{ing.implications}"
-                                  </p>
-                                </div>
-                                <div className="space-y-1 hidden print:block">
-                                  <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Precautionary Action</h5>
-                                  <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    Neutralize metabolic load. Seek higher purity standards.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      {scanResult?.riskyIngredients.length === 0 && (
-                        <div className="p-12 text-center bg-gray-50 dark:bg-slate-900/50 rounded-[32px] border border-dashed border-gray-200 dark:border-dark-border">
-                          <CheckCircle2 className="w-12 h-12 text-healthy-green mx-auto mb-4 opacity-40" />
-                          <p className="text-gray-500 dark:text-gray-400 font-bold">No High-Risk Additives Detected</p>
-                          <p className="text-xs text-gray-400 mt-1">Analysis complete within normal parameters.</p>
                         </div>
                       )}
                     </div>
+
+                    <div className="max-w-xs text-center space-y-4">
+                      <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-[0.2em]">IMPACT SUMMARY</h3>
+                      <p className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                        {scanResult?.grade === 'D' || scanResult?.grade === 'F' 
+                          ? "Critical ingredients identified. Potential long-term health implications detected."
+                          : "Moderate profile detected. Some concerns identified for long-term health."}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+                      <div className="p-6 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-2xl text-center space-y-1">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">RISK LEVEL</p>
+                        <p className={`text-lg font-black uppercase ${scanResult?.score && scanResult.score < 40 ? 'text-critical-red' : 'text-warning-amber'}`}>
+                          {scanResult?.score && scanResult.score < 40 ? 'CRITICAL' : 'MODERATE'}
+                        </p>
+                      </div>
+                      <div className="p-6 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-2xl text-center space-y-1">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">INTEGRITY</p>
+                        <p className="text-lg font-black text-gray-900 dark:text-white uppercase">VERIFIED AI</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Recommendation Section */}
-                  {scanResult?.alternative && (
-                    <div className="bg-gray-900 dark:bg-slate-900 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden print:bg-white print:text-gray-900 print:shadow-none print:border-2 print:border-gray-900">
-                      <div className="absolute right-0 top-0 w-32 h-32 bg-healthy-green/10 rounded-full blur-3xl -mr-16 -mt-16 print:hidden" />
-                      <div className="space-y-4 relative z-10">
-                        <h3 className="text-xs font-black text-healthy-green uppercase tracking-[0.2em] flex items-center gap-2 print:text-gray-900">
-                          <div className="w-4 h-0.5 bg-healthy-green print:bg-gray-900" />
-                          Recommended Substitution
+                  {/* Ingredient Audit Title */}
+                  <div className="pt-12 border-t border-gray-100 dark:border-dark-border">
+                    <div className="flex items-center gap-4">
+                      <div className="w-2 h-2 rounded-full bg-critical-red animate-pulse" />
+                      <div>
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white flex items-baseline gap-3">
+                          Ingredient Audit
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            {scanResult?.riskyIngredients.length || 0} CONCERNS IDENTIFIED
+                          </span>
                         </h3>
-                        <div className="flex items-center justify-between gap-6">
-                          <div>
-                            <h4 className="text-2xl font-black tracking-tight uppercase">{scanResult.alternative.name}</h4>
-                            <p className="text-sm text-gray-400 mt-2 leading-relaxed italic print:text-gray-600">
-                              {scanResult.alternative.reason}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Risky Ingredients - Refined Cards */}
+                  <div className="space-y-4">
+                    {scanResult?.riskyIngredients.map((ing, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`ingredient-card ${
+                          ing.risk === 'high' ? 'ingredient-card-high' : 'ingredient-card-medium'
+                        }`}
+                      >
+                        <div className="flex items-start gap-6">
+                          <div className={`mt-2 w-4 h-4 rounded-full shrink-0 ${ing.risk === 'high' ? 'bg-critical-red' : 'bg-warning-amber'}`} />
+                          <div className="space-y-1 flex-1">
+                            <h4 className="text-xl font-black text-gray-900 dark:text-white serif-header">{ing.name}</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+                              {ing.description} {ing.implications}
                             </p>
-                          </div>
-                          <div className="p-4 bg-white/10 rounded-2xl print:hidden">
-                            <CheckCircle2 className="w-8 h-8 text-healthy-green" />
-                          </div>
-                          <div className="hidden print:block p-4 border-2 border-gray-900">
-                             <CheckCircle2 className="w-8 h-8 text-gray-900" />
                           </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Recommended Swap - Designs Matches Screenshot */}
+                  {scanResult?.alternative && (
+                    <div className="bg-[#0F172A] text-white p-10 rounded-[40px] space-y-6 relative overflow-hidden">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-1 bg-[#22C55E]" />
+                        <h3 className="text-[10px] font-black text-[#22C55E] uppercase tracking-[0.2em]">RECOMMENDED SWAP</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="text-4xl font-black tracking-tight leading-tight uppercase">
+                          {scanResult.alternative.name}
+                        </h4>
+                        <p className="text-gray-400 text-lg italic leading-relaxed">
+                          {scanResult.alternative.reason}
+                        </p>
+                      </div>
                     </div>
-                  )}                  {/* PDF Mission & Disclaimer - Only visible in PDF/High detail view */}
-                  <div className="pt-10 border-t-2 border-gray-900 dark:border-white hidden print:block space-y-10">
-                    {/* Vision Section */}
-                    <div className="bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-dark-border p-8 rounded-2xl">
-                      <div className="flex gap-6 items-start">
-                        <div className="p-3 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-xl shadow-sm">
-                          <Zap className="w-8 h-8 text-healthy-green" />
+                  )}
+
+                  {/* Medical Context & Legal (Design Matches Page 5) */}
+                  <div className="pt-20 space-y-12 border-t border-gray-900 dark:border-white">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                      <div className="md:col-span-3 space-y-6">
+                        <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">MEDICAL CONTEXT & LIMITATIONS</h4>
+                        <p className="text-[11px] text-gray-500 leading-relaxed text-justify uppercase font-medium">
+                          This document is an automated analysis generated by the PureScan AI audit system. Results are derived from visual data extraction and cross-referencing with nutritional databases. THIS IS NOT A REPLACEMENT FOR PROFESSIONAL MEDICAL ADVICE. Laboratory testing is the only definitive method for determining ingredient purity. Individuals with clinical health conditions or severe allergies must prioritize physical labels and professional medical consultations over this automated report.
+                        </p>
+                        
+                        <div className="flex gap-12 pt-4">
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">METHODOLOGY</p>
+                            <p className="text-[9px] font-bold font-mono">CV_LLM_HYBRID_4.0_STABLE</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">REVIEWER</p>
+                            <p className="text-[9px] font-bold font-mono uppercase">AUTOMATED_AI_AGENT</p>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest leading-none">Our Vision & Mission</h4>
-                          <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-1">PureScan Intelligence Protocol</h5>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-                            PureScan is built on the belief that transparency is a fundamental consumer right. We aim to bridge the gap between complex industrial labeling and consumer wellness by providing instant, biochemical transparency. Our vision is a world where health decisions are guided by data-driven clarity rather than corporate marketing ambiguity. We strive to empower a generation of conscious consumers through rigorous AI-driven metabolic audits.
-                          </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-center justify-between p-6 border border-gray-900 dark:border-white rounded-[24px] h-64">
+                        <div className="w-12 h-0.5 bg-gray-900 dark:bg-white" />
+                        <div className="border border-gray-300 dark:border-gray-700 p-4 rounded-xl">
+                          <Scan className="w-6 h-6 text-gray-400" />
                         </div>
+                        <p className="text-[7px] text-gray-500 text-center font-black uppercase tracking-widest">SCAN QR TO VERIFY ORIGINAL</p>
+                        <div className="w-12 h-16 border-l-2 border-r-2 border-b-2 border-gray-200 dark:border-gray-800 rounded-b-full w-full" />
                       </div>
                     </div>
 
-                    {/* Technical & Legal Section */}
-                    <div className="grid grid-cols-4 gap-8">
-                      <div className="col-span-3 space-y-6">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-gray-900 dark:text-white" />
-                            <h4 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest">Clinical Reference Notice & Disclaimer</h4>
-                          </div>
-                          <p className="text-[10px] text-gray-500 leading-relaxed text-justify border-l-2 border-gray-200 dark:border-dark-border pl-4 font-medium italic">
-                            This document is an automated analysis generated by the PureScan AI audit system. Results are derived from visual data extraction and cross-referencing with global nutritional databases. THIS IS NOT A REPLACEMENT FOR PROFESSIONAL MEDICAL ADVICE. Laboratory testing is the only definitive method for determining ingredient purity. Individuals with clinical health conditions, severe allergies, or pediatric metabolic sensitivities must prioritize physical labels and professional medical consultations over this automated report. PureScan is a transparency tool, not a diagnostic platform.
-                          </p>
-                        </div>
-                        <div className="flex gap-10">
-                          <div className="space-y-1.5">
-                            <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">System Methodology</h5>
-                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block">INTEL_HYBRID_CORE_5.0</p>
-                          </div>
-                          <div className="space-y-1.5">
-                            <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">Audit Integrity</h5>
-                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block">SECURED_AI_CERTIFIED</p>
-                          </div>
-                          <div className="space-y-1.5">
-                            <h5 className="text-[8px] font-black text-gray-400 tracking-widest uppercase">Report Status</h5>
-                            <p className="text-[8px] text-gray-800 dark:text-gray-200 font-mono font-bold px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded inline-block uppercase">Verified Final</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 dark:border-dark-border rounded-3xl bg-white dark:bg-dark-card">
-                         <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-2xl flex items-center justify-center mb-3 shadow-lg shadow-gray-900/10 dark:shadow-white/10">
-                            <Scan className="w-8 h-8 text-white dark:text-gray-900" />
-                         </div>
-                         <p className="text-[8px] text-gray-900 dark:text-white text-center font-black uppercase tracking-widest leading-tight">Verify Scan<br/>Originality</p>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-8 flex flex-col items-center gap-4">
-                      <div className="w-12 h-0.5 bg-gray-100 dark:bg-slate-800" />
-                      <p className="text-[9px] text-gray-400 text-center font-bold tracking-[0.4em] uppercase opacity-60">KNOW THE TRUTH • IMPROVE YOUR LIFE • PURESCAN INTEL</p>
-                      <div className="flex gap-4">
-                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
-                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
-                        <div className="w-1 h-1 bg-gray-200 dark:bg-slate-700 rounded-full" />
-                      </div>
+                    <div className="flex flex-col items-center pt-8">
+                      <p className="text-[9px] text-gray-400 text-center font-bold tracking-[0.4em] uppercase">KNOW THE TRUTH, IMPROVE YOUR LIFE • PURESCAN CLINICAL INTEL</p>
                     </div>
                   </div>
                 </div>
