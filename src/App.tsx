@@ -852,8 +852,10 @@ export default function App() {
           width: '1024px',
           colorScheme: 'light',
           background: 'white',
+          // Force layout centering for capture
           display: 'block',
-          boxSizing: 'border-box'
+          marginLeft: 'auto',
+          marginRight: 'auto'
         },
       });
 
@@ -868,19 +870,19 @@ export default function App() {
       const pageHeight = pdf.internal.pageSize.getHeight();
       
       // Professional margins (10mm on each side)
-      const marginX = 10;
-      const marginY = 10;
-      const contentWidth = pageWidth - (marginX * 2);
+      const margin = 10;
+      const usableHeight = pageHeight - (margin * 2);
+      const contentWidth = pageWidth - (margin * 2);
       
       const imgProps = pdf.getImageProperties(dataUrl);
       const imgWidth = contentWidth;
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       
       let heightLeft = imgHeight;
-      let position = marginY; 
+      let position = margin; // Start at top margin
 
-      // Add first page - perfectly centered between marginX
-      pdf.addImage(dataUrl, 'PNG', marginX, position, imgWidth, imgHeight, undefined, 'FAST');
+      // Add first page
+      pdf.addImage(dataUrl, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= usableHeight;
 
       // Add subsequent pages only if significant content remains (> 15mm)
@@ -1586,7 +1588,7 @@ export default function App() {
                 
                 <div 
                   id="pdf-report-capture-area"
-                  className={`report-container ${isExporting ? 'export-mode export-mode-active p-0' : 'p-8 space-y-12'}`}
+                  className={`p-8 space-y-12 report-container ${isExporting ? 'export-mode export-mode-active' : ''}`}
                 >
                   {/* Professional Report Header (PDF Refined) */}
                   <div className="pdf-section flex justify-between items-center border-b border-gray-900 pb-8 dark:border-white">

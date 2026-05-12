@@ -39,7 +39,7 @@ body {
   width: 1024px !important;
   margin: 0 auto !important;
   background: white !important;
-  padding: 80px 80px 60px 80px !important; /* Uniform 80px side margins for symmetry */
+  padding: 80px 100px 60px 100px !important; /* Professional document margins */
   display: flex !important;
   flex-direction: column !important;
   box-shadow: none !important;
@@ -47,14 +47,12 @@ body {
   height: auto !important;
   min-height: 0 !important;
   overflow: visible !important;
-  box-sizing: border-box !important;
 }
 
 .export-mode {
   background: white !important;
   color: #000000 !important;
   color-scheme: light !important;
-  width: 100% !important;
 }
 
 /* Typography Overrides for Export */
