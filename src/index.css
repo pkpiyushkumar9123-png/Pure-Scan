@@ -39,7 +39,7 @@ body {
   width: 1024px !important;
   margin: 0 auto !important;
   background: white !important;
-  padding: 80px 100px 60px 100px !important; /* Professional document margins */
+  padding: 80px 80px 60px 80px !important; /* Uniform 80px side margins for symmetry */
   display: flex !important;
   flex-direction: column !important;
   box-shadow: none !important;
@@ -47,12 +47,14 @@ body {
   height: auto !important;
   min-height: 0 !important;
   overflow: visible !important;
+  box-sizing: border-box !important;
 }
 
 .export-mode {
   background: white !important;
   color: #000000 !important;
   color-scheme: light !important;
+  width: 100% !important;
 }
 
 /* Typography Overrides for Export */
@@ -96,6 +98,18 @@ body {
   border: 1px solid transparent !important;
   padding: 24px !important;
   margin-bottom: 20px !important;
+}
+
+.export-mode .pdf-section {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  position: relative !important;
+}
+
+.pdf-spacer {
+  background: white !important;
+  display: block !important;
+  width: 100% !important;
 }
 
 .export-mode .ingredient-card-high {

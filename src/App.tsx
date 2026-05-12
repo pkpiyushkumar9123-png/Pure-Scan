@@ -802,6 +802,39 @@ export default function App() {
       // Small delay to let styles settle after removing .dark (layout shifts)
       await new Promise(resolve => setTimeout(resolve, 800));
 
+      // SMART PAGINATION: Insert spacers before sections that would split across pages
+      const pageHeightPx = 1350; // Approximated pixels for A4 usable height at 1024px width
+      const sections = element.querySelectorAll('.pdf-section');
+      
+      // Remove any existing spacers first
+      element.querySelectorAll('.pdf-spacer').forEach(s => s.remove());
+
+      let currentShift = 0;
+      sections.forEach((section: any) => {
+        const rect = section.getBoundingClientRect();
+        const containerRect = element.getBoundingClientRect();
+        const relativeTop = rect.top - containerRect.top;
+        const relativeBottom = rect.bottom - containerRect.top;
+
+        const startPage = Math.floor(relativeTop / pageHeightPx);
+        const endPage = Math.floor(relativeBottom / pageHeightPx);
+
+        if (startPage !== endPage) {
+          // Section spans multiple pages - push it to the next page
+          const spacerHeight = (startPage + 1) * pageHeightPx - relativeTop;
+          if (spacerHeight > 0 && spacerHeight < 1000) { // Safety check
+            const spacer = document.createElement('div');
+            spacer.className = 'pdf-spacer';
+            spacer.style.height = `${spacerHeight}px`;
+            section.parentNode.insertBefore(spacer, section);
+            currentShift += spacerHeight;
+          }
+        }
+      });
+
+      // Wait for layout to settle after inserting spacers
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       // html-to-image with fixed dimensions to prevent stretching
       const dataUrl = await htmlToImage.toPng(element, {
         quality: 1.0,
@@ -819,10 +852,8 @@ export default function App() {
           width: '1024px',
           colorScheme: 'light',
           background: 'white',
-          // Force layout centering for capture
           display: 'block',
-          marginLeft: 'auto',
-          marginRight: 'auto'
+          boxSizing: 'border-box'
         },
       });
 
@@ -837,19 +868,19 @@ export default function App() {
       const pageHeight = pdf.internal.pageSize.getHeight();
       
       // Professional margins (10mm on each side)
-      const margin = 10;
-      const usableHeight = pageHeight - (margin * 2);
-      const contentWidth = pageWidth - (margin * 2);
+      const marginX = 10;
+      const marginY = 10;
+      const contentWidth = pageWidth - (marginX * 2);
       
       const imgProps = pdf.getImageProperties(dataUrl);
       const imgWidth = contentWidth;
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       
       let heightLeft = imgHeight;
-      let position = margin; // Start at top margin
+      let position = marginY; 
 
-      // Add first page
-      pdf.addImage(dataUrl, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+      // Add first page - perfectly centered between marginX
+      pdf.addImage(dataUrl, 'PNG', marginX, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= usableHeight;
 
       // Add subsequent pages only if significant content remains (> 15mm)
@@ -868,6 +899,12 @@ export default function App() {
       setError("PDF Export failed. Try again.");
     } finally {
       setIsExporting(false);
+      // CLEANUP: Remove spacers
+      const element = document.getElementById('pdf-report-capture-area');
+      if (element) {
+        element.querySelectorAll('.pdf-spacer').forEach(s => s.remove());
+      }
+      
       // Restore dark mode
       document.documentElement.removeAttribute('data-theme');
       if (isDark) {
@@ -1549,10 +1586,10 @@ export default function App() {
                 
                 <div 
                   id="pdf-report-capture-area"
-                  className={`p-8 space-y-12 report-container ${isExporting ? 'export-mode export-mode-active' : ''}`}
+                  className={`report-container ${isExporting ? 'export-mode export-mode-active p-0' : 'p-8 space-y-12'}`}
                 >
                   {/* Professional Report Header (PDF Refined) */}
-                  <div className="flex justify-between items-center border-b border-gray-900 pb-8 dark:border-white">
+                  <div className="pdf-section flex justify-between items-center border-b border-gray-900 pb-8 dark:border-white">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center">
@@ -1570,7 +1607,7 @@ export default function App() {
                   </div>
 
                   {/* Standard Header (App View) */}
-                  <div className="flex flex-col items-center justify-center pt-8 text-center">
+                  <div className="pdf-section flex flex-col items-center justify-center pt-8 text-center">
                     <h2 className="serif-title text-gray-900 dark:text-white leading-tight mb-2">
                       {scanResult?.productName || "Unknown Product"}
                     </h2>
@@ -1578,7 +1615,7 @@ export default function App() {
                   </div>
 
                   {/* Impact Summary Section */}
-                  <div className="flex flex-col items-center space-y-8">
+                  <div className="pdf-section flex flex-col items-center space-y-8">
                     <div className="relative">
                       {scanResult && (
                         <div className="relative flex items-center justify-center w-48 h-48">
@@ -1637,7 +1674,7 @@ export default function App() {
                   </div>
 
                   {/* Ingredient Audit Title */}
-                  <div className="pt-12 border-t border-gray-100 dark:border-dark-border">
+                  <div className="pdf-section pt-12 border-t border-gray-100 dark:border-dark-border">
                     <div className="flex items-center gap-4">
                       <div className="w-2 h-2 rounded-full bg-critical-red animate-pulse" />
                       <div>
@@ -1656,7 +1693,7 @@ export default function App() {
                     {scanResult?.riskyIngredients.map((ing, idx) => (
                       <div 
                         key={idx} 
-                        className={`ingredient-card ${
+                        className={`pdf-section ingredient-card ${
                           ing.risk === 'high' ? 'ingredient-card-high' : 'ingredient-card-medium'
                         }`}
                       >
@@ -1675,7 +1712,7 @@ export default function App() {
 
                   {/* Recommended Swap - Designs Matches Screenshot */}
                   {scanResult?.alternative && (
-                    <div className="bg-[#0F172A] text-white p-10 rounded-[40px] space-y-6 relative overflow-hidden">
+                    <div className="pdf-section bg-[#0F172A] text-white p-10 rounded-[40px] space-y-6 relative overflow-hidden">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-1 bg-[#22C55E]" />
                         <h3 className="text-[10px] font-black text-[#22C55E] uppercase tracking-[0.2em]">RECOMMENDED SWAP</h3>
@@ -1692,7 +1729,7 @@ export default function App() {
                   )}
 
                   {/* Medical Context & Legal (Design Matches Page 5) */}
-                  <div className="pt-20 space-y-12 border-t border-gray-900 dark:border-white">
+                  <div className="pdf-section pt-20 space-y-12 border-t border-gray-900 dark:border-white">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                       <div className="md:col-span-3 space-y-6">
                         <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">MEDICAL CONTEXT & LIMITATIONS</h4>
