@@ -842,7 +842,6 @@ export default function App() {
         backgroundColor: '#ffffff',
         width: 1024,
         style: {
-          padding: '0',
           margin: '0',
           maxHeight: 'none',
           height: 'auto',
@@ -854,8 +853,7 @@ export default function App() {
           background: 'white',
           // Force layout centering for capture
           display: 'block',
-          marginLeft: 'auto',
-          marginRight: 'auto'
+          boxSizing: 'border-box'
         },
       });
 
