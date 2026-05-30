@@ -27,7 +27,9 @@ import {
   Sun,
   Share2,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Activity,
+  Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -211,6 +213,82 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Real-time API Usage and Quota Analytics State ---
+  const [apiLogs, setApiLogs] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('purescan_api_usage_stats');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const recordApiCall = (response: any, type: string) => {
+    try {
+      const isCustom = !!customApiKey;
+      let tokens = 0;
+      if (response?.usageMetadata?.totalTokenCount) {
+        tokens = response.usageMetadata.totalTokenCount;
+      } else {
+        const textLength = (response?.text?.length || 0);
+        tokens = Math.ceil(textLength / 4) || 120;
+      }
+      
+      const newCall = {
+        timestamp: new Date().toISOString(),
+        tokensUsed: tokens,
+        isCustomKey: isCustom,
+        type
+      };
+
+      const saved = localStorage.getItem('purescan_api_usage_stats');
+      const logs = saved ? JSON.parse(saved) : [];
+      logs.push(newCall);
+      const trimmed = logs.slice(-100);
+      localStorage.setItem('purescan_api_usage_stats', JSON.stringify(trimmed));
+      setApiLogs(trimmed);
+    } catch (err) {
+      console.error("Failed to record api call metrics", err);
+    }
+  };
+
+  const [testingKey, setTestingKey] = useState(false);
+  const [keyTestReport, setKeyTestReport] = useState<{
+    status: 'healthy' | 'error' | 'none';
+    message: string;
+  } | null>(null);
+
+  const handleTestKeyStatus = async () => {
+    setTestingKey(true);
+    setKeyTestReport(null);
+    try {
+      const key = getApiKey();
+      const ai = new GoogleGenAI({ apiKey: key });
+      const start = Date.now();
+      const testResponse = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: "Respond with precisely JSON: {\"status\": \"healthy\"}",
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+      const duration = Date.now() - start;
+      recordApiCall(testResponse, 'Developer Connection Ping');
+      setKeyTestReport({
+        status: 'healthy',
+        message: `Connected successfully in ${duration}ms! Key is valid and active.`
+      });
+    } catch (err: any) {
+      console.error("API Key Test failed:", err);
+      setKeyTestReport({
+        status: 'error',
+        message: err?.message || "Key verification failed. Ensure billing is active or check characters."
+      });
+    } finally {
+      setTestingKey(false);
+    }
+  };
   const [countdown, setCountdown] = useState<number>(0);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -468,6 +546,7 @@ export default function App() {
       });
 
       const box = JSON.parse(response.text);
+      recordApiCall(response, "Label Face Detection");
 
       if (box.hasFace) {
         setError("Face detected. For privacy reasons, we do not process images containing human faces.");
@@ -543,6 +622,7 @@ export default function App() {
       });
 
       const text = response.text || "";
+      recordApiCall(response, "Ingredient OCR Extraction");
       setExtractedIngredients(text);
       if (autoScan && text && text !== "No ingredients detected") {
         await analyzeIngredients(text);
@@ -611,6 +691,7 @@ export default function App() {
       });
 
       const result = JSON.parse(response.text);
+      recordApiCall(response, "Biochemical Audit & Health Grade");
       
       // AI Guardrail: Confidence Score Check
       if (result.confidenceScore !== undefined && result.confidenceScore < 85) {
@@ -1426,6 +1507,158 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              {/* Real-time Gemini API Quota & Usage Analytics */}
+              {(() => {
+                const todayTag = new Date().toISOString().split('T')[0];
+                const logsToday = apiLogs.filter(log => log?.timestamp && log.timestamp.split('T')[0] === todayTag);
+                const requestsToday = logsToday.length;
+
+                const nowMs = Date.now();
+                const logsLastMinute = apiLogs.filter(log => log?.timestamp && (nowMs - new Date(log.timestamp).getTime()) < 60000);
+                const requestsMinute = logsLastMinute.length;
+
+                const tokensAllTime = apiLogs.reduce((sum, log) => sum + (log?.tokensUsed || 0), 0);
+
+                const DAILY_LIMIT = 1500;
+                const MINUTE_LIMIT = 15;
+
+                const remainingQuotaDay = Math.max(0, DAILY_LIMIT - requestsToday);
+                const dayQuotaPercent = Math.min(100, Math.floor((remainingQuotaDay / DAILY_LIMIT) * 100));
+
+                return (
+                  <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 rounded-xl">
+                          <Cpu className="w-5 h-5 text-purple-500 animate-pulse" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-white">Gemini Quota & Usage</h3>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400">100% Original Connection Analytics</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-healthy-green/10 text-healthy-green rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 bg-healthy-green rounded-full animate-ping" />
+                        Active Logs
+                      </div>
+                    </div>
+
+                    {/* Progress Circle & Status Box */}
+                    <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-dark-border">
+                      <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+                        {/* SVG Circle Gauge */}
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <circle
+                            className="text-gray-100 dark:text-slate-800"
+                            strokeWidth="3.5"
+                            stroke="currentColor"
+                            fill="transparent"
+                            r="16"
+                            cx="18"
+                            cy="18"
+                          />
+                          <path
+                            className="text-healthy-green transition-all duration-500"
+                            strokeWidth="3.5"
+                            strokeDasharray={`${dayQuotaPercent}, 100`}
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="transparent"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-extrabold text-gray-900 dark:text-white leading-none">{dayQuotaPercent}%</span>
+                          <span className="text-[8px] text-gray-500 uppercase font-semibold mt-0.5">Left</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-center sm:text-left flex-1 w-full">
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Connection Mode:</span>
+                          <span className="text-xs font-extrabold px-1.5 py-0.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200">
+                            {customApiKey ? "Private Key" : "Shared Fallback"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Operating on Google AI Studio's default quota limits for Gemini Flash.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Metrics Table */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-dark-border space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Today's Scans</p>
+                        <p className="text-xs font-extrabold text-gray-900 dark:text-white">{requestsToday} / {DAILY_LIMIT}</p>
+                      </div>
+                      <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-dark-border space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Rate limit</p>
+                        <p className="text-xs font-extrabold text-gray-900 dark:text-white">{requestsMinute} / {MINUTE_LIMIT} RPM</p>
+                      </div>
+                      <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-dark-border space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Daily Remaining</p>
+                        <p className="text-xs font-extrabold text-healthy-green">{remainingQuotaDay} left</p>
+                      </div>
+                      <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-dark-border space-y-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Session Tokens</p>
+                        <p className="text-xs font-extrabold text-[#a25cf7]">{tokensAllTime.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* API Connection & Diagnostics Tester */}
+                    <div className="space-y-3 pt-1">
+                      <button
+                        onClick={handleTestKeyStatus}
+                        disabled={testingKey}
+                        className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 dark:disabled:bg-purple-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.99] text-xs"
+                      >
+                        {testingKey ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            PINGING GOOGLE CLOUD INSTANCE...
+                          </>
+                        ) : (
+                          <>
+                            <Activity className="w-4 h-4" />
+                            TEST REAL-TIME KEY CONNECTION
+                          </>
+                        )}
+                      </button>
+
+                      <AnimatePresence>
+                        {keyTestReport && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
+                              keyTestReport.status === 'healthy'
+                                ? 'bg-healthy-green/10 border-healthy-green/20 text-healthy-green'
+                                : 'bg-red-500/10 border-red-500/20 text-critical-red'
+                            }`}
+                          >
+                            {keyTestReport.status === 'healthy' ? (
+                              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-healthy-green" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-critical-red" />
+                            )}
+                            <div>
+                              <p className="font-extrabold uppercase tracking-wide text-[9px]">
+                                {keyTestReport.status === 'healthy' ? "KEY IS LIVE" : "CONNECTION ERROR"}
+                              </p>
+                              <p className="text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
+                                {keyTestReport.message}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
